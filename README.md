@@ -33,8 +33,8 @@ The app uses the `homey:manager:api` permission to read the values of devices fr
 
 ```bash
 npm install -g homey
-git clone <this repository>
-cd <folder>
+git clone https://github.com/lucje-81/Homey_compact_widgets.git
+cd Homey_compact_widgets
 npm install
 homey login
 homey app install
