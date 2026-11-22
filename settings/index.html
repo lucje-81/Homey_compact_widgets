@@ -43,8 +43,11 @@
   <div class="row">
     <select id="panelSelect"></select>
     <button id="newPanel" class="small" data-t="newPanel"></button>
-    <button id="renamePanel" class="small" data-t="renamePanel"></button>
     <button id="deletePanel" class="small danger" data-t="deletePanel"></button>
+  </div>
+  <div class="row" id="nameRow">
+    <label for="panelName" data-t="panelName" style="font-size:13px;color:#555"></label>
+    <input id="panelName" type="text" style="flex:1;min-width:160px;max-width:320px">
   </div>
 
   <div id="editor"></div>
@@ -107,7 +110,10 @@
       sel.innerHTML = panels.map(function (p) {
         return '<option value="' + esc(p.id) + '"' + (p.id === current ? ' selected' : '') + '>' + esc(p.name) + '</option>';
       }).join('');
-      $('renamePanel').disabled = $('deletePanel').disabled = !panels.length;
+      $('deletePanel').disabled = !panels.length;
+      $('nameRow').style.display = panels.length ? '' : 'none';
+      var p = panel();
+      if (p && document.activeElement !== $('panelName')) $('panelName').value = p.name;
     }
 
     function deviceOptions(selected) {
@@ -225,19 +231,25 @@
       renderEditor(); setDirty(true);
     });
 
-    $('panelSelect').addEventListener('change', function (e) { current = e.target.value; renderEditor(); });
+    $('panelSelect').addEventListener('change', function (e) { current = e.target.value; $('panelName').value = panel().name; renderEditor(); });
+    // No window.prompt(): it is ignored inside the Homey mobile app
     $('newPanel').addEventListener('click', function () {
-      var name = window.prompt(t('panelName'), t('defaultPanelName'));
-      if (!name) return;
-      var p = { id: uid(), name: name.trim(), gauges: [] };
+      var base = t('defaultPanelName');
+      var name = base;
+      var n = 2;
+      while (panels.some(function (x) { return x.name === name; })) name = base + ' ' + (n++);
+      var p = { id: uid(), name: name, gauges: [] };
       panels.push(p); current = p.id;
       renderPanelSelect(); renderEditor(); setDirty(true);
+      $('panelName').focus();
+      $('panelName').select();
     });
-    $('renamePanel').addEventListener('click', function () {
+    $('panelName').addEventListener('input', function (e) {
       var p = panel(); if (!p) return;
-      var name = window.prompt(t('panelName'), p.name);
-      if (!name) return;
-      p.name = name.trim(); renderPanelSelect(); renderPreview(); setDirty(true);
+      p.name = e.target.value;
+      var opt = $('panelSelect').querySelector('option[value="' + p.id + '"]');
+      if (opt) opt.textContent = p.name;
+      renderPreview(); setDirty(true);
     });
     $('deletePanel').addEventListener('click', function () {
       var p = panel(); if (!p) return;
@@ -250,11 +262,15 @@
     });
     $('save').addEventListener('click', function () {
       // drop gauges without a chosen value
-      panels.forEach(function (p) { p.gauges = (p.gauges || []).filter(function (g) { return g.deviceId && g.capability; }); });
+      panels.forEach(function (p) {
+        p.name = String(p.name || '').trim() || t('defaultPanelName');
+        p.gauges = (p.gauges || []).filter(function (g) { return g.deviceId && g.capability; });
+      });
       H.set('panels', panels, function (err) {
         if (err) return H.alert(err.message || String(err));
         setDirty(false);
         $('status').textContent = t('saved');
+        renderPanelSelect();
         renderEditor();
       });
     });

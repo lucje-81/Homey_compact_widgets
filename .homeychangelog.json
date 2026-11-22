@@ -1,4 +1,8 @@
 {
+  "0.1.1": {
+    "en": "Panel editor: new/rename/delete now work in the Homey mobile app",
+    "nl": "Paneeleditor: nieuw, naam wijzigen en verwijderen werken nu in de Homey-app"
+  },
   "0.1.0": {
     "en": "First version: gauges widget with panel editor",
     "nl": "Eerste versie: wijzerplaten-widget met paneeleditor"
