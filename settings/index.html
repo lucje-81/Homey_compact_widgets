@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
+  <script src="gauge.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; color: #222; margin: 0; padding: 12px; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    .hint { color: #666; margin: 0 0 12px; line-height: 1.4; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+    select, input, button { font-size: 14px; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; background: #fff; color: #222; }
+    input[type=number] { width: 80px; }
+    input[type=checkbox] { width: auto; }
+    button { cursor: pointer; }
+    button.primary { background: #2f6fde; border-color: #2f6fde; color: #fff; }
+    button.danger { color: #b00020; border-color: #e3a3ad; }
+    button.small { padding: 3px 8px; font-size: 13px; }
+    .gauge-edit { border: 1px solid #e5e5e5; border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+    .gauge-edit .head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .gauge-edit .head input { flex: 1; min-width: 0; }
+    .fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+    .fields label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: #555; }
+    .fields label.check { flex-direction: row; align-items: center; gap: 6px; padding-top: 18px; }
+    .fields select, .fields input { width: 100%; box-sizing: border-box; }
+    .fields label.check input { width: auto; margin: 0; }
+    #addGauge { margin-bottom: 14px; }
+    .preview { border: 1px solid #e5e5e5; border-radius: 12px; padding: 10px; margin: 6px 0 14px; color: #222; }
+    .preview.dark { background: #1c1d22; color: #f2f2f2; border-color: #1c1d22; }
+    .preview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 6px; max-width: 360px; }
+    .preview-grid .g { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+    .preview-grid svg { width: 100%; height: auto; }
+    .preview-grid span { font-size: 11px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .status { font-size: 13px; color: #1d6b36; min-height: 18px; }
+    .status.unsaved { color: #8a5a00; }
+    .empty { padding: 16px; text-align: center; color: #777; border: 1px dashed #ccc; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1 data-t="title"></h1>
+  <p class="hint" data-t="intro"></p>
+
+  <div class="row">
+    <select id="panelSelect"></select>
+    <button id="newPanel" class="small" data-t="newPanel"></button>
+    <button id="renamePanel" class="small" data-t="renamePanel"></button>
+    <button id="deletePanel" class="small danger" data-t="deletePanel"></button>
+  </div>
+
+  <div id="editor"></div>
+
+  <div class="row">
+    <button id="save" class="primary" data-t="save"></button>
+    <span id="status" class="status"></span>
+  </div>
+
+  <script type="text/javascript">
+    var H;
+    var panels = [];
+    var devices = [];
+    var current = null; // id of the selected panel
+    var dirty = false;
+    var dark = false;
+
+    var $ = function (id) { return document.getElementById(id); };
+    var esc = function (s) { return CompactGauge.esc(s); };
+    function t(k) { return H.__('settings.' + k); }
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+    function panel() { return panels.find(function (p) { return p.id === current; }); }
+    function device(id) { return devices.find(function (d) { return d.id === id; }); }
+    function cap(g) {
+      var d = device(g.deviceId);
+      return d && d.capabilities.find(function (c) { return c.id === g.capability; });
+    }
+
+    function setDirty(v) {
+      dirty = v;
+      $('status').textContent = v ? t('unsaved') : '';
+      $('status').className = 'status' + (v ? ' unsaved' : '');
+    }
+
+    // Sensible defaults when a value is chosen
+    function defaults(g, c, d) {
+      var units = c.units || '';
+      g.title = c.title;
+      g.unit = units;
+      g.decimals = (c.decimals === undefined || c.decimals === null) ? null : Math.min(c.decimals, 2);
+      if (typeof c.min === 'number' && typeof c.max === 'number' && c.max > c.min) {
+        g.min = c.min; g.max = c.max;
+      } else if (units === '%' || c.id.indexOf('measure_battery') === 0) {
+        g.min = 0; g.max = 100;
+      } else if (c.id.indexOf('measure_temperature') === 0) {
+        g.min = 0; g.max = 40;
+      } else if (units === 'W') {
+        g.min = 0; g.max = 5000;
+      } else {
+        var v = Math.abs(Number(c.value) || 0);
+        g.min = 0; g.max = v > 0 ? Math.pow(10, Math.ceil(Math.log10(v * 2))) : 100;
+      }
+      g.scheme = c.id.indexOf('measure_battery') === 0 ? 'ryg' : 'gyr';
+      g.fromZero = g.min < 0 && g.max > 0;
+      g.deviceName = d.name;
+    }
+
+    function renderPanelSelect() {
+      var sel = $('panelSelect');
+      sel.innerHTML = panels.map(function (p) {
+        return '<option value="' + esc(p.id) + '"' + (p.id === current ? ' selected' : '') + '>' + esc(p.name) + '</option>';
+      }).join('');
+      $('renamePanel').disabled = $('deletePanel').disabled = !panels.length;
+    }
+
+    function deviceOptions(selected) {
+      var html = '<option value="">' + esc(t('chooseDevice')) + '</option>';
+      var zone = null;
+      devices.forEach(function (d) {
+        if (d.zone !== zone) {
+          if (zone !== null) html += '</optgroup>';
+          zone = d.zone;
+          html += '<optgroup label="' + esc(zone || '-') + '">';
+        }
+        html += '<option value="' + esc(d.id) + '"' + (d.id === selected ? ' selected' : '') + '>' + esc(d.name) + '</option>';
+      });
+      if (zone !== null) html += '</optgroup>';
+      return html;
+    }
+
+    function capOptions(g) {
+      var d = device(g.deviceId);
+      if (!d) return '<option value="">-</option>';
+      return '<option value="">' + esc(t('chooseValue')) + '</option>' + d.capabilities.map(function (c) {
+        var now = CompactGauge.format(c.value, { unit: c.units, decimals: c.decimals });
+        return '<option value="' + esc(c.id) + '"' + (c.id === g.capability ? ' selected' : '') + '>'
+          + esc(c.title) + ' (' + esc(now) + ')</option>';
+      }).join('');
+    }
+
+    function schemeOptions(sel) {
+      return CompactGauge.schemes.map(function (s) {
+        return '<option value="' + s + '"' + (s === sel ? ' selected' : '') + '>' + esc(t('scheme_' + s)) + '</option>';
+      }).join('');
+    }
+
+    function renderEditor() {
+      var p = panel();
+      var ed = $('editor');
+      if (!p) {
+        ed.innerHTML = '<div class="empty">' + esc(t('noPanels')) + '</div>';
+        return;
+      }
+      var html = '<div class="row"><strong>' + esc(t('preview')) + '</strong>'
+        + '<label style="font-size:13px"><input type="checkbox" id="dark"' + (dark ? ' checked' : '') + '> ' + esc(t('darkPreview')) + '</label></div>'
+        + '<div class="preview' + (dark ? ' dark' : '') + '" id="preview"></div>';
+      (p.gauges || []).forEach(function (g, i) {
+        html += '<div class="gauge-edit" data-i="' + i + '">'
+          + '<div class="head"><input data-f="title" value="' + esc(g.title || '') + '" placeholder="' + esc(t('titleField')) + '">'
+          + '<button class="small" data-a="up" ' + (i === 0 ? 'disabled' : '') + '>&#8593;</button>'
+          + '<button class="small" data-a="down" ' + (i === p.gauges.length - 1 ? 'disabled' : '') + '>&#8595;</button>'
+          + '<button class="small danger" data-a="del">&#10005;</button></div>'
+          + '<div class="fields">'
+          + '<label>' + esc(t('device')) + '<select data-f="deviceId">' + deviceOptions(g.deviceId) + '</select></label>'
+          + '<label>' + esc(t('value')) + '<select data-f="capability">' + capOptions(g) + '</select></label>'
+          + '<label>' + esc(t('min')) + '<input type="number" data-f="min" value="' + esc(g.min) + '"></label>'
+          + '<label>' + esc(t('max')) + '<input type="number" data-f="max" value="' + esc(g.max) + '"></label>'
+          + '<label>' + esc(t('colors')) + '<select data-f="scheme">' + schemeOptions(g.scheme) + '</select></label>'
+          + '<label>' + esc(t('unit')) + '<input data-f="unit" value="' + esc(g.unit || '') + '"></label>'
+          + '<label>' + esc(t('decimals')) + '<input type="number" min="0" max="3" data-f="decimals" value="' + esc(g.decimals == null ? '' : g.decimals) + '" placeholder="' + esc(t('auto')) + '"></label>'
+          + '<label class="check"><input type="checkbox" data-f="fromZero"' + (g.fromZero ? ' checked' : '') + '> ' + esc(t('fromZero')) + '</label>'
+          + '</div></div>';
+      });
+      html += '<button id="addGauge">+ ' + esc(t('addGauge')) + '</button>';
+      ed.innerHTML = html;
+      renderPreview();
+    }
+
+    function renderPreview() {
+      var p = panel();
+      var el = $('preview');
+      if (!p || !el) return;
+      if (!(p.gauges || []).length) { el.innerHTML = '<div style="opacity:.6">' + esc(t('noGauges')) + '</div>'; return; }
+      el.innerHTML = '<div style="font-weight:600;font-size:14px;margin:0 0 2px 2px">' + esc(p.name) + '</div><div class="preview-grid">'
+        + p.gauges.map(function (g) {
+          var c = cap(g);
+          return '<div class="g">' + CompactGauge.svg(g, c ? c.value : null) + '<span>' + esc(g.title || '') + '</span></div>';
+        }).join('') + '</div>';
+    }
+
+    // One delegated handler for all editor fields and buttons
+    $('editor').addEventListener('change', function (e) {
+      if (e.target.id === 'dark') { dark = e.target.checked; renderEditor(); return; }
+      var box = e.target.closest('.gauge-edit');
+      var f = e.target.getAttribute('data-f');
+      if (!box || !f) return;
+      var g = panel().gauges[Number(box.getAttribute('data-i'))];
+      var v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+      if (f === 'min' || f === 'max') v = Number(v);
+      if (f === 'decimals') v = v === '' ? null : Math.max(0, Math.min(3, Number(v)));
+      g[f] = v;
+      if (f === 'deviceId') { g.capability = ''; renderEditor(); }
+      else if (f === 'capability' && v) { defaults(g, cap(g), device(g.deviceId)); renderEditor(); }
+      else renderPreview();
+      setDirty(true);
+    });
+    $('editor').addEventListener('input', function (e) {
+      var box = e.target.closest('.gauge-edit');
+      var f = e.target.getAttribute('data-f');
+      if (!box || (f !== 'title' && f !== 'unit')) return;
+      panel().gauges[Number(box.getAttribute('data-i'))][f] = e.target.value;
+      renderPreview();
+      setDirty(true);
+    });
+    $('editor').addEventListener('click', function (e) {
+      var p = panel();
+      if (e.target.id === 'addGauge') {
+        p.gauges.push({ id: uid(), title: '', deviceId: '', capability: '', min: 0, max: 100, scheme: 'gyr', fromZero: false, decimals: null, unit: '' });
+        renderEditor(); setDirty(true); return;
+      }
+      var a = e.target.getAttribute('data-a');
+      var box = e.target.closest('.gauge-edit');
+      if (!a || !box) return;
+      var i = Number(box.getAttribute('data-i'));
+      if (a === 'del') p.gauges.splice(i, 1);
+      if (a === 'up' && i > 0) p.gauges.splice(i - 1, 0, p.gauges.splice(i, 1)[0]);
+      if (a === 'down' && i < p.gauges.length - 1) p.gauges.splice(i + 1, 0, p.gauges.splice(i, 1)[0]);
+      renderEditor(); setDirty(true);
+    });
+
+    $('panelSelect').addEventListener('change', function (e) { current = e.target.value; renderEditor(); });
+    $('newPanel').addEventListener('click', function () {
+      var name = window.prompt(t('panelName'), t('defaultPanelName'));
+      if (!name) return;
+      var p = { id: uid(), name: name.trim(), gauges: [] };
+      panels.push(p); current = p.id;
+      renderPanelSelect(); renderEditor(); setDirty(true);
+    });
+    $('renamePanel').addEventListener('click', function () {
+      var p = panel(); if (!p) return;
+      var name = window.prompt(t('panelName'), p.name);
+      if (!name) return;
+      p.name = name.trim(); renderPanelSelect(); renderPreview(); setDirty(true);
+    });
+    $('deletePanel').addEventListener('click', function () {
+      var p = panel(); if (!p) return;
+      H.confirm(t('confirmDelete').replace('{name}', p.name), 'warning', function (err, yes) {
+        if (!yes) return;
+        panels = panels.filter(function (x) { return x.id !== p.id; });
+        current = panels.length ? panels[0].id : null;
+        renderPanelSelect(); renderEditor(); setDirty(true);
+      });
+    });
+    $('save').addEventListener('click', function () {
+      // drop gauges without a chosen value
+      panels.forEach(function (p) { p.gauges = (p.gauges || []).filter(function (g) { return g.deviceId && g.capability; }); });
+      H.set('panels', panels, function (err) {
+        if (err) return H.alert(err.message || String(err));
+        setDirty(false);
+        $('status').textContent = t('saved');
+        renderEditor();
+      });
+    });
+
+    function loadDevices(cb) {
+      H.api('GET', '/devices', null, function (err, result) {
+        if (err) return H.alert(err.message || String(err));
+        devices = result || [];
+        if (cb) cb();
+      });
+    }
+
+    function onHomeyReady(Homey) {
+      H = Homey;
+      document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
+      Homey.get('panels', function (err, value) {
+        panels = Array.isArray(value) ? value : [];
+        current = panels.length ? panels[0].id : null;
+        loadDevices(function () {
+          renderPanelSelect();
+          renderEditor();
+          Homey.ready();
+          // refresh current values in the preview
+          setInterval(function () { loadDevices(renderPreview); }, 10000);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

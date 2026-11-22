@@ -1,0 +1,16 @@
+{
+  "name": "compact.widgets",
+  "version": "0.1.0",
+  "main": "app.js",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "homey-api": "^3.21.3"
+  },
+  "scripts": {
+    "sync-gauge": "cp widgets/gauges/public/gauge.js settings/gauge.js",
+    "validate": "homey app validate"
+  }
+}

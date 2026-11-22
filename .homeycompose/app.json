@@ -1,0 +1,53 @@
+{
+  "id": "compact.widgets",
+  "version": "0.1.0",
+  "compatibility": ">=12.3.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Compact Widgets",
+    "nl": "Compacte widgets"
+  },
+  "description": {
+    "en": "Small, configurable dashboard widgets: several gauges in one widget instead of one per tile",
+    "nl": "Kleine, instelbare dashboardwidgets: meerdere wijzerplaten in één widget in plaats van één per tegel"
+  },
+  "category": [
+    "tools"
+  ],
+  "tags": {
+    "en": [
+      "dashboard",
+      "widget",
+      "gauge",
+      "compact"
+    ],
+    "nl": [
+      "dashboard",
+      "widget",
+      "wijzerplaat",
+      "compact"
+    ]
+  },
+  "permissions": [
+    "homey:manager:api"
+  ],
+  "brandColor": "#2f6fde",
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Luc Van Laer",
+    "email": "luc.van_laer@yahoo.com"
+  },
+  "api": {
+    "getDevices": {
+      "method": "GET",
+      "path": "/devices"
+    }
+  }
+}

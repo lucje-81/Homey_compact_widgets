@@ -1,0 +1,115 @@
+{
+  "name": {
+    "en": "Gauges",
+    "nl": "Wijzerplaten"
+  },
+  "settings": [
+    {
+      "id": "panel",
+      "type": "autocomplete",
+      "title": {
+        "en": "Panel",
+        "nl": "Paneel"
+      },
+      "hint": {
+        "en": "Create panels in the app settings.",
+        "nl": "Maak panelen aan in de instellingen van de app."
+      }
+    },
+    {
+      "id": "columns",
+      "type": "dropdown",
+      "value": "auto",
+      "title": {
+        "en": "Gauges per row",
+        "nl": "Wijzerplaten per rij"
+      },
+      "values": [
+        {
+          "id": "auto",
+          "title": {
+            "en": "Automatic",
+            "nl": "Automatisch"
+          }
+        },
+        {
+          "id": "1",
+          "title": {
+            "en": "1"
+          }
+        },
+        {
+          "id": "2",
+          "title": {
+            "en": "2"
+          }
+        },
+        {
+          "id": "3",
+          "title": {
+            "en": "3"
+          }
+        },
+        {
+          "id": "4",
+          "title": {
+            "en": "4"
+          }
+        },
+        {
+          "id": "6",
+          "title": {
+            "en": "6"
+          }
+        }
+      ]
+    },
+    {
+      "id": "size",
+      "type": "dropdown",
+      "value": "M",
+      "title": {
+        "en": "Size",
+        "nl": "Grootte"
+      },
+      "values": [
+        {
+          "id": "S",
+          "title": {
+            "en": "Small",
+            "nl": "Klein"
+          }
+        },
+        {
+          "id": "M",
+          "title": {
+            "en": "Medium",
+            "nl": "Normaal"
+          }
+        },
+        {
+          "id": "L",
+          "title": {
+            "en": "Large",
+            "nl": "Groot"
+          }
+        }
+      ]
+    },
+    {
+      "id": "show_title",
+      "type": "checkbox",
+      "value": true,
+      "title": {
+        "en": "Show panel name",
+        "nl": "Paneelnaam tonen"
+      }
+    }
+  ],
+  "api": {
+    "getPanel": {
+      "method": "GET",
+      "path": "/panel"
+    }
+  }
+}
