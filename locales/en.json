@@ -50,5 +50,16 @@
   "white": "White",
   "colour": "Colour",
   "saturation": "Sat.",
-  "chooseDevices": "Choose your lights and switches in this widget's settings."
+  "chooseDevices": "Choose your lights and switches in this widget's settings.",
+  "target": "Target",
+  "closed": "Closed",
+  "open": "Open",
+  "goingUp": "Going up",
+  "goingDown": "Going down",
+  "position": "Position",
+  "notSupported": "Not supported",
+  "chooseClimate": "Choose your thermostats and covers in this widget's settings.",
+  "chooseFlows": "Choose up to 8 flows in this widget's settings.",
+  "flow": "Flow",
+  "advancedFlow": "Advanced flow"
 }

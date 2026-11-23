@@ -29,6 +29,19 @@ On a tablet with 4 dashboard columns, six gauges take about the height of one st
 - Tiles per row: automatic or 1–4; size small/medium/large. Narrow tiles put the name over the full width (two lines), tiles stay at least 44 px high for touch
 - Sliders send while dragging (max. ~3 times per second) and always the final value; echoes from the device are ignored briefly so sliders do not jump back
 
+## Climate and covers widget (v0.5)
+
+- Thermostats: current temperature large, target and mode below; orange when heating, blue when cooling (mode `cool`)
+- Tap a thermostat to open **− / +** buttons (in the device's own step, min and max) and the available modes; the new target is sent 0.7 s after the last tap
+- Window coverings: state (`Open 60 %`, `Closed`, going up/down) with a thin position bar; tap for **▲ ■ ▼** and a position slider (only what the device supports)
+- Plain on/off devices can be added too and are switched with a tap
+
+## Flows widget (v0.5)
+
+- Up to 8 buttons, each starting a flow or advanced flow (only flows that can be started, i.e. with the "This flow is started" card)
+- Choose them in the widget settings by typing part of the name
+- Tap: spinner while starting, green ✓ when done, red ✗ on error
+
 ## How to use
 
 1. Install the app (see below).
@@ -40,7 +53,7 @@ You can use the same panel in several widgets (e.g. 2 per row on a tablet, 3 per
 
 ## Permission
 
-The app uses the `homey:manager:api` permission to read the values of devices from other apps and, in the Lights and switches widget, to control them (only on/off, dim, light colour, light temperature and light mode).
+The app uses the `homey:manager:api` permission to read the values of devices from other apps and, in the Lights and switches and Climate widgets, to control them (on/off, dim, light colour/temperature/mode, target temperature, thermostat mode and window coverings), and to start the flows you put on the Flows widget.
 
 ## Installation
 
@@ -58,13 +71,14 @@ To update later: `git pull`, then `homey app install`.
 ## Files
 
 - `app.js`: live subscriptions to the device values used in panels (via `homey-api`), pushes changes to the widgets
-- `widgets/gauges/`: the widget (`public/index.html`, `public/gauge.js`)
+- `widgets/gauges/`: the gauges widget (`public/index.html`, `public/gauge.js`)
+- `widgets/controls/`, `widgets/climate/`, `widgets/flows/`: lights and switches, climate and covers, flow buttons
 - `settings/index.html`: panel editor with live preview
 - `settings/gauge.js`: copy of `widgets/gauges/public/gauge.js` (`npm run sync-gauge` after changing the renderer)
 
 ## Planned
 
-- Thermostats, window coverings and scenes/flows in the same compact style
+- Ideas welcome
 
 ## License
 

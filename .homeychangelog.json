@@ -1,4 +1,8 @@
 {
+  "0.5.0": {
+    "en": "New widgets: Climate and covers (thermostats, window coverings) and Flows (buttons to start flows)",
+    "nl": "Nieuwe widgets: Klimaat en rolluiken (thermostaten, rolluiken) en Flows (knoppen om flows te starten)"
+  },
   "0.4.0": {
     "en": "New widget: Lights and switches (on/off, dim, warm/cold white, colour)",
     "nl": "Nieuwe widget: Lampen en schakelaars (aan/uit, dimmen, warm/koud wit, kleur)"

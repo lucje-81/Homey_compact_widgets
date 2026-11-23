@@ -1,0 +1,105 @@
+{
+  "name": {
+    "en": "Climate and covers",
+    "nl": "Klimaat en rolluiken"
+  },
+  "devices": {
+    "type": "global",
+    "singular": false
+  },
+  "settings": [
+    {
+      "id": "title",
+      "type": "text",
+      "value": "",
+      "title": {
+        "en": "Title (optional)",
+        "nl": "Titel (optioneel)"
+      }
+    },
+    {
+      "id": "columns",
+      "type": "dropdown",
+      "value": "auto",
+      "title": {
+        "en": "Tiles per row",
+        "nl": "Tegels per rij"
+      },
+      "values": [
+        {
+          "id": "auto",
+          "title": {
+            "en": "Automatic",
+            "nl": "Automatisch"
+          }
+        },
+        {
+          "id": "1",
+          "title": {
+            "en": "1"
+          }
+        },
+        {
+          "id": "2",
+          "title": {
+            "en": "2"
+          }
+        },
+        {
+          "id": "3",
+          "title": {
+            "en": "3"
+          }
+        },
+        {
+          "id": "4",
+          "title": {
+            "en": "4"
+          }
+        }
+      ]
+    },
+    {
+      "id": "size",
+      "type": "dropdown",
+      "value": "M",
+      "title": {
+        "en": "Size",
+        "nl": "Grootte"
+      },
+      "values": [
+        {
+          "id": "S",
+          "title": {
+            "en": "Small",
+            "nl": "Klein"
+          }
+        },
+        {
+          "id": "M",
+          "title": {
+            "en": "Medium",
+            "nl": "Normaal"
+          }
+        },
+        {
+          "id": "L",
+          "title": {
+            "en": "Large",
+            "nl": "Groot"
+          }
+        }
+      ]
+    }
+  ],
+  "api": {
+    "getState": {
+      "method": "GET",
+      "path": "/state"
+    },
+    "setValue": {
+      "method": "POST",
+      "path": "/set"
+    }
+  }
+}

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { margin: 0; color: var(--homey-text-color, #222);
+      font-family: var(--homey-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+      -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+    .title { font-size: 14px; font-weight: 600; margin: 0 0 4px 2px; }
+    .grid { display: grid; gap: 6px; --tile-h: 46px; --icon: 26px; --name: 13px; }
+    .grid.size-S { --tile-h: 40px; --icon: 22px; --name: 12px; }
+    .grid.size-L { --tile-h: 56px; --icon: 32px; --name: 14px; }
+    .btn { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: var(--tile-h); padding: 4px 10px 4px 8px;
+      border-radius: 12px; background: rgba(127,127,127,.12); cursor: pointer; transition: background-color .2s; }
+    .btn:active { background: rgba(127,127,127,.28); }
+    .btn.ok { background: rgba(92,191,74,.22); }
+    .btn.err { background: rgba(224,67,63,.22); }
+    .icon { flex: none; width: var(--icon); height: var(--icon); border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; background: rgba(58,123,213,.9); color: #fff; }
+    .btn.ok .icon { background: #3f9b2d; }
+    .btn.err .icon { background: #e0433f; }
+    .icon svg { width: 58%; height: 58%; }
+    .busy .icon svg { animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .name { flex: 1; min-width: 0; font-size: var(--name); font-weight: 600; line-height: 1.2;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: break-word; hyphens: auto; }
+    .message { font-size: 13px; opacity: .75; padding: 8px 2px; line-height: 1.4; }
+    /* Narrow buttons: icon on top, name below over the full width */
+    .grid.narrow .btn { flex-direction: column; align-items: flex-start; gap: 4px; padding: 7px 8px 8px; }
+    .grid.narrow .icon { width: 24px; height: 24px; }
+    .grid.narrow .name { flex: none; width: 100%; overflow-wrap: normal; }
+  </style>
+</head>
+<body class="homey-widget-small">
+  <div id="root"></div>
+  <script>
+    var MIN_WIDTH = { S: 88, M: 112, L: 150 };
+    var NARROW = 150;
+    var SVG = function (p, fill) { return '<svg viewBox="0 0 24 24" fill="' + (fill || 'none') + '" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>'; };
+    var ICONS = {
+      play: SVG('<path d="M8 5.5v13l10-6.5z"/>', 'currentColor'),
+      busy: SVG('<path d="M12 3a9 9 0 1 0 9 9"/>'),
+      ok: SVG('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+      err: SVG('<path d="M7 7l10 10M17 7L7 17"/>'),
+    };
+    var state = { flows: [], settings: {}, ready: false, lastHeight: 0, status: {} };
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+    function columns(n) {
+      var s = state.settings;
+      if (s.columns && s.columns !== 'auto') return Math.min(Number(s.columns), Math.max(1, n));
+      var width = document.getElementById('root').clientWidth || window.innerWidth;
+      return Math.max(1, Math.min(Math.floor((width + 6) / ((MIN_WIDTH[s.size] || MIN_WIDTH.M) + 6)), n, 4));
+    }
+
+    function render() {
+      var root = document.getElementById('root');
+      if (!state.flows.length) {
+        root.innerHTML = '<div class="message">' + esc(Homey.__('chooseFlows')) + '</div>';
+        return finish();
+      }
+      var html = state.settings.title ? '<div class="title">' + esc(state.settings.title) + '</div>' : '';
+      var cols = columns(state.flows.length);
+      var width = root.clientWidth || window.innerWidth;
+      var narrow = (width - 6 * (cols - 1)) / cols < NARROW;
+      html += '<div class="grid size-' + (state.settings.size || 'M') + (narrow ? ' narrow' : '') + '" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))">';
+      state.flows.forEach(function (f) {
+        var st = state.status[f.id] || '';
+        html += '<div class="btn ' + st + '" data-id="' + esc(f.id) + '" role="button" aria-label="' + esc(f.name) + '">'
+          + '<span class="icon">' + ICONS[st || 'play'] + '</span><span class="name">' + esc(f.name) + '</span></div>';
+      });
+      root.innerHTML = html + '</div>';
+      finish();
+    }
+
+    function finish() {
+      var height = Math.ceil(document.body.scrollHeight);
+      if (!state.ready) { state.ready = true; state.lastHeight = height; Homey.ready({ height: height }); }
+      else if (Math.abs(height - state.lastHeight) > 1) { state.lastHeight = height; Homey.setHeight(height); }
+    }
+
+    function setStatus(id, st, clearAfter) {
+      state.status[id] = st;
+      render();
+      if (clearAfter) setTimeout(function () { if (state.status[id] === st) { state.status[id] = ''; render(); } }, clearAfter);
+    }
+
+    function run(id) {
+      if (state.status[id] === 'busy') return;
+      setStatus(id, 'busy');
+      Homey.api('POST', '/run', { id: id })
+        .then(function () { setStatus(id, 'ok', 1500); })
+        .catch(function (err) { console.error(err); setStatus(id, 'err', 2500); });
+    }
+
+    function onHomeyReady(Homey) {
+      state.settings = Homey.getSettings() || {};
+      document.documentElement.lang = (navigator.language || 'nl').slice(0, 2);
+      // flow1..flow8, in this order, skipping empty slots
+      for (var i = 1; i <= 8; i++) {
+        var f = state.settings['flow' + i];
+        if (f && f.id) state.flows.push({ id: f.id, name: f.name || f.id });
+      }
+      var root = document.getElementById('root');
+      root.addEventListener('click', function (e) {
+        var b = e.target.closest('.btn');
+        if (b) run(b.getAttribute('data-id'));
+      });
+      var lastWidth = root.clientWidth;
+      window.addEventListener('resize', function () { if (root.clientWidth !== lastWidth) { lastWidth = root.clientWidth; render(); } });
+      render();
+    }
+  </script>
+</body>
+</html>

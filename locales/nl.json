@@ -50,5 +50,16 @@
   "white": "Wit",
   "colour": "Kleur",
   "saturation": "Verz.",
-  "chooseDevices": "Kies je lampen en schakelaars in de instellingen van deze widget."
+  "chooseDevices": "Kies je lampen en schakelaars in de instellingen van deze widget.",
+  "target": "Doel",
+  "closed": "Dicht",
+  "open": "Open",
+  "goingUp": "Gaat omhoog",
+  "goingDown": "Gaat omlaag",
+  "position": "Positie",
+  "notSupported": "Niet ondersteund",
+  "chooseClimate": "Kies je thermostaten en rolluiken in de instellingen van deze widget.",
+  "chooseFlows": "Kies tot 8 flows in de instellingen van deze widget.",
+  "flow": "Flow",
+  "advancedFlow": "Geavanceerde flow"
 }

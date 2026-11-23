@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { margin: 0; color: var(--homey-text-color, #222);
+      font-family: var(--homey-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+      -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+    .title { font-size: 14px; font-weight: 600; margin: 0 0 4px 2px; }
+    .grid { display: grid; gap: 6px; --tile-h: 52px; --icon: 30px; --name: 13px; }
+    .grid.size-S { --tile-h: 44px; --icon: 26px; --name: 12px; }
+    .grid.size-L { --tile-h: 62px; --icon: 36px; --name: 14px; }
+    .tile { position: relative; display: flex; align-items: center; gap: 8px; min-width: 0; min-height: var(--tile-h);
+      padding: 0 8px; border-radius: 12px; background: rgba(127,127,127,.12); cursor: pointer; overflow: hidden; }
+    .tile.on { background: var(--tint); }
+    .tile.na { opacity: .45; }
+    .tile.open { box-shadow: inset 0 0 0 2px rgba(127,127,127,.35); }
+    .icon { flex: none; width: var(--icon); height: var(--icon); border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; background: rgba(127,127,127,.18); }
+    .tile.on .icon { background: var(--accent); color: #fff; }
+    .icon svg { width: 60%; height: 60%; }
+    .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .name { font-size: var(--name); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .state { font-size: 11px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+    .big { flex: none; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .level { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); border-radius: 0 2px 2px 0; }
+    .grid.narrow .tile { flex-wrap: wrap; padding: 7px 8px 8px; gap: 4px 6px; align-content: flex-start; }
+    .grid.narrow .icon { width: 26px; height: 26px; }
+    .grid.narrow .big { margin-left: auto; }
+    .grid.narrow .txt { flex-basis: 100%; order: 3; }
+    .grid.narrow .name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      line-height: 1.2; overflow-wrap: break-word; hyphens: auto; }
+    .panel { grid-column: 1 / -1; background: rgba(127,127,127,.10); border-radius: 12px; padding: 8px 10px 10px; }
+    .row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+    .btn { flex: 1; height: 44px; border-radius: 10px; border: none; background: rgba(127,127,127,.2); color: inherit;
+      font-size: 18px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .btn:active { background: rgba(127,127,127,.38); }
+    .btn svg { width: 22px; height: 22px; }
+    .target { flex: 1.4; text-align: center; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip { padding: 7px 12px; border-radius: 16px; background: rgba(127,127,127,.18); font-size: 13px; cursor: pointer; }
+    .chip.sel { background: var(--accent, #3a7bd5); color: #fff; }
+    .ctl { display: flex; align-items: center; gap: 8px; margin: 8px 0 2px; }
+    .ctl label { flex: none; width: 44px; font-size: 11px; opacity: .7; }
+    .ctl .val { flex: none; width: 38px; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; }
+    input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; height: 22px; border-radius: 11px; margin: 0;
+      outline: none; border: 1px solid rgba(127,127,127,.35); background: linear-gradient(90deg, #555, #cfe3ff); }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: #fff;
+      border: 2px solid rgba(0,0,0,.35); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+    .message { font-size: 13px; opacity: .75; padding: 8px 2px; line-height: 1.4; }
+  </style>
+</head>
+<body class="homey-widget-small">
+  <div id="root"></div>
+  <script>
+    var MIN_WIDTH = { S: 88, M: 112, L: 150 };
+    var NARROW = 150;
+    var SVG = function (p) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>'; };
+    var ICONS = {
+      thermostat: SVG('<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 9v7"/>'),
+      cover: SVG('<path d="M4 4h16M5 4v16M19 4v16M5 8h14M5 12h14M5 16h14"/>'),
+      power: SVG('<path d="M12 3v8M7.5 6.5a7 7 0 1 0 9 0"/>'),
+      up: SVG('<path d="M6 15l6-6 6 6"/>'),
+      down: SVG('<path d="M6 9l6 6 6-6"/>'),
+      stop: SVG('<rect x="7" y="7" width="10" height="10" rx="1.5"/>'),
+      minus: SVG('<path d="M6 12h12"/>'),
+      plus: SVG('<path d="M12 6v12M6 12h12"/>'),
+    };
+    var state = { devices: [], settings: {}, open: null, ready: false, lastHeight: 0, language: undefined, hold: {}, timers: {} };
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function dev(id) { return state.devices.find(function (d) { return d.id === id; }); }
+    function has(d, cap) { return d.caps && Object.prototype.hasOwnProperty.call(d.caps, cap); }
+    function kind(d) {
+      if (d.missing) return 'missing';
+      if (has(d, 'target_temperature')) return 'thermostat';
+      if (has(d, 'windowcoverings_set') || has(d, 'windowcoverings_state')) return 'cover';
+      if (has(d, 'onoff')) return 'switch';
+      return 'other';
+    }
+    function num(v, dec) {
+      if (v === null || v === undefined || isNaN(Number(v))) return '–';
+      try { return Number(v).toLocaleString(state.language || undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
+      catch (e) { return Number(v).toFixed(dec); }
+    }
+    function tempText(v) { return num(v, 1) + '°'; }
+    function decimalsOf(step) { return String(step).indexOf('.') >= 0 ? String(step).split('.')[1].length : 0; }
+
+    function columns(n) {
+      var s = state.settings;
+      if (s.columns && s.columns !== 'auto') return Math.min(Number(s.columns), Math.max(1, n));
+      var width = document.getElementById('root').clientWidth || window.innerWidth;
+      return Math.max(1, Math.min(Math.floor((width + 6) / ((MIN_WIDTH[s.size] || MIN_WIDTH.M) + 6)), n, 4));
+    }
+
+    function tileHtml(d) {
+      var k = kind(d);
+      var c = d.caps;
+      var cls = 'tile';
+      var accent = '#888';
+      var tint = 'rgba(127,127,127,.12)';
+      var stateText = '';
+      var big = '';
+      var level = null;
+      var icon = ICONS.power;
+      if (k === 'thermostat') {
+        icon = ICONS.thermostat;
+        var cur = has(d, 'measure_temperature') ? Number(c.measure_temperature) : null;
+        var tgt = Number(c.target_temperature);
+        big = has(d, 'measure_temperature') ? tempText(cur) : tempText(tgt);
+        stateText = Homey.__('target') + ' ' + tempText(tgt);
+        if (has(d, 'thermostat_mode') && c.thermostat_mode) {
+          var m = ((d.options && d.options.thermostat_mode) || []).find(function (x) { return x.id === c.thermostat_mode; });
+          stateText += ' · ' + (m ? m.title : c.thermostat_mode);
+        }
+        if (cur !== null && !isNaN(cur) && tgt > cur + 0.3) { cls += ' on'; accent = '#e8702a'; tint = 'rgba(232,112,42,.2)'; }
+        else if (c.thermostat_mode === 'cool' && cur !== null && !isNaN(cur) && tgt < cur - 0.3) { cls += ' on'; accent = '#3a7bd5'; tint = 'rgba(58,123,213,.2)'; }
+      } else if (k === 'cover') {
+        icon = ICONS.cover;
+        if (has(d, 'windowcoverings_set') && c.windowcoverings_set != null) {
+          var pos = Number(c.windowcoverings_set);
+          level = pos;
+          stateText = pos <= 0.01 ? Homey.__('closed') : pos >= 0.99 ? Homey.__('open') : Homey.__('open') + ' ' + Math.round(pos * 100) + ' %';
+          if (pos > 0.01) { cls += ' on'; accent = '#3a7bd5'; tint = 'rgba(58,123,213,.16)'; }
+        }
+        if (has(d, 'windowcoverings_state') && c.windowcoverings_state && c.windowcoverings_state !== 'idle') {
+          stateText = Homey.__(c.windowcoverings_state === 'up' ? 'goingUp' : 'goingDown');
+        }
+        if (!stateText) stateText = '–';
+      } else if (k === 'switch') {
+        if (c.onoff === true) { cls += ' on'; accent = '#5cbf4a'; tint = 'rgba(92,191,74,.2)'; }
+        stateText = Homey.__(c.onoff ? 'on' : 'off');
+      } else {
+        stateText = Homey.__('notSupported');
+        cls += ' na';
+      }
+      if (d.available === false) { cls += ' na'; stateText = Homey.__('unavailable'); }
+      if (state.open === d.id) cls += ' open';
+      return '<div class="' + cls + '" data-id="' + esc(d.id) + '" style="--accent:' + accent + ';--tint:' + tint + '">'
+        + '<span class="icon">' + icon + '</span>'
+        + (big ? '<span class="big">' + esc(big) + '</span>' : '')
+        + '<span class="txt"><span class="name">' + esc(d.name) + '</span><span class="state">' + esc(stateText) + '</span></span>'
+        + (level !== null && level > 0.01 ? '<span class="level" style="width:' + (level * 100).toFixed(1) + '%"></span>' : '')
+        + '</div>';
+    }
+
+    function panelHtml(d) {
+      var k = kind(d);
+      var c = d.caps;
+      var html = '<div class="panel" data-panel="' + esc(d.id) + '">';
+      if (k === 'thermostat') {
+        var o = (d.options && d.options.target_temperature) || { step: 0.5 };
+        html += '<div class="row"><button class="btn" data-act="minus" data-id="' + esc(d.id) + '" aria-label="-">' + ICONS.minus + '</button>'
+          + '<span class="target" data-target="' + esc(d.id) + '">' + num(c.target_temperature, decimalsOf(o.step)) + ' ' + esc(o.units || '°C') + '</span>'
+          + '<button class="btn" data-act="plus" data-id="' + esc(d.id) + '" aria-label="+">' + ICONS.plus + '</button></div>';
+        var modes = (d.options && d.options.thermostat_mode) || [];
+        if (has(d, 'thermostat_mode') && modes.length) {
+          html += '<div class="chips">' + modes.map(function (m) {
+            return '<span class="chip' + (m.id === c.thermostat_mode ? ' sel' : '') + '" data-act="mode" data-id="' + esc(d.id) + '" data-mode="' + esc(m.id) + '">' + esc(m.title) + '</span>';
+          }).join('') + '</div>';
+        }
+      } else if (k === 'cover') {
+        html += '<div class="row">'
+          + '<button class="btn" data-act="up" data-id="' + esc(d.id) + '" aria-label="up">' + ICONS.up + '</button>'
+          + (has(d, 'windowcoverings_state') ? '<button class="btn" data-act="stop" data-id="' + esc(d.id) + '" aria-label="stop">' + ICONS.stop + '</button>' : '')
+          + '<button class="btn" data-act="down" data-id="' + esc(d.id) + '" aria-label="down">' + ICONS.down + '</button></div>';
+        if (has(d, 'windowcoverings_set')) {
+          var p = Number(c.windowcoverings_set) || 0;
+          html += '<div class="ctl"><label>' + esc(Homey.__('position')) + '</label><input type="range" min="0" max="100" step="1" value="'
+            + Math.round(p * 100) + '" data-id="' + esc(d.id) + '"><span class="val">' + Math.round(p * 100) + ' %</span></div>';
+        }
+      }
+      return html + '</div>';
+    }
+
+    function render() {
+      var root = document.getElementById('root');
+      if (!state.devices.length) {
+        root.innerHTML = '<div class="message">' + esc(Homey.__('chooseClimate')) + '</div>';
+        return finish();
+      }
+      var cols = columns(state.devices.length);
+      var width = root.clientWidth || window.innerWidth;
+      var narrow = (width - 6 * (cols - 1)) / cols < NARROW;
+      var html = state.settings.title ? '<div class="title">' + esc(state.settings.title) + '</div>' : '';
+      html += '<div class="grid size-' + (state.settings.size || 'M') + (narrow ? ' narrow' : '') + '" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))">';
+      var openIdx = state.devices.findIndex(function (x) { return x.id === state.open; });
+      state.devices.forEach(function (d, i) {
+        html += tileHtml(d);
+        var endOfRow = (i % cols === cols - 1) || i === state.devices.length - 1;
+        if (endOfRow && openIdx >= i - (i % cols) && openIdx <= i) html += panelHtml(state.devices[openIdx]);
+      });
+      root.innerHTML = html + '</div>';
+      finish();
+    }
+
+    function finish() {
+      var height = Math.ceil(document.body.scrollHeight);
+      if (!state.ready) { state.ready = true; state.lastHeight = height; Homey.ready({ height: height }); }
+      else if (Math.abs(height - state.lastHeight) > 1) { state.lastHeight = height; Homey.setHeight(height); }
+    }
+
+    function send(id, cap, value) {
+      state.hold[id + '|' + cap] = Date.now() + 2000;
+      return Homey.api('POST', '/set', { deviceId: id, capability: cap, value: value }).catch(function (err) {
+        state.hold[id + '|' + cap] = 0;
+        console.error(err);
+        load();
+      });
+    }
+
+    // Thermostat: change locally at once, send once the user stops tapping
+    function stepTarget(d, dir) {
+      var o = (d.options && d.options.target_temperature) || { min: 5, max: 30, step: 0.5 };
+      var v = Number(d.caps.target_temperature) || o.min;
+      v = Math.round((v + dir * o.step) / o.step) * o.step;
+      v = Math.max(o.min, Math.min(o.max, Number(v.toFixed(3))));
+      d.caps.target_temperature = v;
+      state.hold[d.id + '|target_temperature'] = Date.now() + 3000;
+      var el = document.querySelector('[data-target="' + CSS.escape(d.id) + '"]');
+      if (el) el.textContent = num(v, decimalsOf(o.step)) + ' ' + (o.units || '°C');
+      var tile = document.querySelector('.tile[data-id="' + CSS.escape(d.id) + '"]');
+      if (tile) tile.outerHTML = tileHtml(d);
+      clearTimeout(state.timers[d.id]);
+      state.timers[d.id] = setTimeout(function () { send(d.id, 'target_temperature', v); }, 700);
+    }
+
+    function cover(d, act) {
+      if (act === 'stop') return send(d.id, 'windowcoverings_state', 'idle');
+      if (has(d, 'windowcoverings_state')) {
+        d.caps.windowcoverings_state = act;
+        send(d.id, 'windowcoverings_state', act);
+      } else {
+        d.caps.windowcoverings_set = act === 'up' ? 1 : 0;
+        send(d.id, 'windowcoverings_set', d.caps.windowcoverings_set);
+      }
+      render();
+    }
+
+    function onClick(e) {
+      var btn = e.target.closest('[data-act]');
+      if (btn) {
+        var d = dev(btn.getAttribute('data-id'));
+        var act = btn.getAttribute('data-act');
+        if (act === 'plus') return stepTarget(d, 1);
+        if (act === 'minus') return stepTarget(d, -1);
+        if (act === 'mode') { d.caps.thermostat_mode = btn.getAttribute('data-mode'); send(d.id, 'thermostat_mode', d.caps.thermostat_mode); return render(); }
+        return cover(d, act);
+      }
+      var tile = e.target.closest('.tile');
+      if (!tile) return;
+      var t = dev(tile.getAttribute('data-id'));
+      if (!t || t.available === false) return;
+      var k = kind(t);
+      if (k === 'switch') { t.caps.onoff = !t.caps.onoff; send(t.id, 'onoff', t.caps.onoff); return render(); }
+      if (k === 'thermostat' || k === 'cover') { state.open = state.open === t.id ? null : t.id; render(); }
+    }
+
+    function onSlide(e, final) {
+      if (e.target.type !== 'range') return;
+      var d = dev(e.target.getAttribute('data-id'));
+      var v = Number(e.target.value) / 100;
+      e.target.nextSibling.textContent = Math.round(v * 100) + ' %';
+      d.caps.windowcoverings_set = v;
+      state.hold[d.id + '|windowcoverings_set'] = Date.now() + 3000;
+      if (final) { send(d.id, 'windowcoverings_set', v); render(); }
+    }
+
+    function onValues(batch) {
+      var dirty = false;
+      Object.keys(batch).forEach(function (k) {
+        var i = k.indexOf('|');
+        var d = dev(k.slice(0, i));
+        var cap = k.slice(i + 1);
+        if (!d || !has(d, cap)) return;
+        if (state.hold[k] && state.hold[k] > Date.now()) return;
+        d.caps[cap] = batch[k];
+        dirty = true;
+      });
+      var dragging = document.activeElement && document.activeElement.type === 'range';
+      if (dirty && !dragging) render();
+    }
+
+    function load() {
+      var ids = Homey.getDeviceIds ? Homey.getDeviceIds() : [];
+      if (!ids || !ids.length) { state.devices = []; return render(); }
+      return Homey.api('GET', '/state?ids=' + encodeURIComponent(ids.join(',')))
+        .then(function (data) {
+          state.devices = (data && data.devices) || [];
+          state.language = data && data.language;
+          if (state.language) document.documentElement.lang = state.language;
+          render();
+        })
+        .catch(function (err) {
+          document.getElementById('root').innerHTML = '<div class="message">' + esc(err && err.message ? err.message : err) + '</div>';
+          finish();
+        });
+    }
+
+    function onHomeyReady(Homey) {
+      state.settings = Homey.getSettings() || {};
+      var root = document.getElementById('root');
+      root.addEventListener('click', onClick);
+      root.addEventListener('input', function (e) { onSlide(e, false); });
+      root.addEventListener('change', function (e) { onSlide(e, true); });
+      Homey.on('values', onValues);
+      var lastWidth = root.clientWidth;
+      window.addEventListener('resize', function () { if (root.clientWidth !== lastWidth) { lastWidth = root.clientWidth; render(); } });
+      load();
+    }
+  </script>
+</body>
+</html>

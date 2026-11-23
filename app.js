@@ -4,8 +4,14 @@ const Homey = require('homey');
 const { HomeyAPI } = require('homey-api');
 
 const PANELS_KEY = 'panels';
-// Capabilities the "Lights and switches" widget shows and controls
-const CONTROL_CAPABILITIES = ['onoff', 'dim', 'light_hue', 'light_saturation', 'light_temperature', 'light_mode'];
+// Capabilities the control widgets show; SETTABLE ones can be changed from a widget
+const CONTROL_CAPABILITIES = [
+  'onoff', 'dim', 'light_hue', 'light_saturation', 'light_temperature', 'light_mode',
+  'target_temperature', 'measure_temperature', 'thermostat_mode',
+  'windowcoverings_set', 'windowcoverings_state',
+];
+const SETTABLE = CONTROL_CAPABILITIES.filter((c) => c !== 'measure_temperature');
+const FLOW_SLOTS = ['flow1', 'flow2', 'flow3', 'flow4', 'flow5', 'flow6', 'flow7', 'flow8'];
 const FLUSH_MS = 300;
 
 /**
@@ -44,6 +50,11 @@ class CompactWidgetsApp extends Homey.App {
             description: `${(p.gauges || []).length} ${this.homey.__('gauges')}`,
           }));
       });
+
+    const flowsWidget = this.homey.dashboards.getWidget('flows');
+    for (const slot of FLOW_SLOTS) {
+      flowsWidget.registerSettingAutocompleteListener(slot, async (query) => this.getFlowList(query));
+    }
 
     this.queueSync();
     this.log('Compact Widgets initialized');
@@ -146,6 +157,14 @@ class CompactWidgetsApp extends Homey.App {
           }
           caps[capId] = key in this.values ? this.values[key] : capability.value;
           if (capId === 'dim') options.dim = { min: capability.min ?? 0, max: capability.max ?? 1 };
+          if (capId === 'target_temperature') {
+            options.target_temperature = {
+              min: capability.min ?? 5, max: capability.max ?? 30, step: capability.step || 0.5, units: capability.units || '°C',
+            };
+          }
+          if (capId === 'thermostat_mode' && Array.isArray(capability.values)) {
+            options.thermostat_mode = capability.values.map((v) => ({ id: v.id, title: v.title || v.id }));
+          }
         }
         devices.push({
           id, name: device.name, class: device.class, virtualClass: device.virtualClass || null, caps, options,
@@ -161,8 +180,37 @@ class CompactWidgetsApp extends Homey.App {
 
   /** Set one capability of a device (only the capabilities the widget offers). */
   async setControlValue({ deviceId, capability, value }) {
-    if (!deviceId || !CONTROL_CAPABILITIES.includes(capability)) throw new Error('Not allowed');
+    if (!deviceId || !SETTABLE.includes(capability)) throw new Error('Not allowed');
     await this.api.devices.setCapabilityValue({ deviceId, capabilityId: capability, value });
+    return true;
+  }
+
+  /** Triggerable flows and advanced flows for the Flows widget autocomplete. */
+  async getFlowList(query) {
+    const q = String(query || '').toLowerCase();
+    const [flows, advanced] = await Promise.all([
+      this.api.flow.getFlows().catch(() => ({})),
+      this.api.flow.getAdvancedFlows().catch(() => ({})),
+    ]);
+    const list = [];
+    for (const f of Object.values(flows)) {
+      if (f.triggerable) list.push({ id: `f:${f.id}`, name: f.name, description: this.homey.__('flow') });
+    }
+    for (const f of Object.values(advanced)) {
+      if (f.triggerable) list.push({ id: `a:${f.id}`, name: f.name, description: this.homey.__('advancedFlow') });
+    }
+    return list
+      .filter((f) => f.name.toLowerCase().includes(q))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .slice(0, 50);
+  }
+
+  /** Start a flow chosen in a Flows widget ("f:<id>" or "a:<id>"). */
+  async runFlow(id) {
+    const [kind, flowId] = String(id || '').split(':');
+    if (!flowId) throw new Error('Unknown flow');
+    if (kind === 'a') await this.api.flow.triggerAdvancedFlow({ id: flowId });
+    else await this.api.flow.triggerFlow({ id: flowId });
     return true;
   }
 

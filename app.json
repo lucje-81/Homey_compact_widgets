@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "compact.widgets",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": [
@@ -56,6 +56,112 @@
     }
   },
   "widgets": {
+    "climate": {
+      "name": {
+        "en": "Climate and covers",
+        "nl": "Klimaat en rolluiken"
+      },
+      "devices": {
+        "type": "global",
+        "singular": false
+      },
+      "settings": [
+        {
+          "id": "title",
+          "type": "text",
+          "value": "",
+          "title": {
+            "en": "Title (optional)",
+            "nl": "Titel (optioneel)"
+          }
+        },
+        {
+          "id": "columns",
+          "type": "dropdown",
+          "value": "auto",
+          "title": {
+            "en": "Tiles per row",
+            "nl": "Tegels per rij"
+          },
+          "values": [
+            {
+              "id": "auto",
+              "title": {
+                "en": "Automatic",
+                "nl": "Automatisch"
+              }
+            },
+            {
+              "id": "1",
+              "title": {
+                "en": "1"
+              }
+            },
+            {
+              "id": "2",
+              "title": {
+                "en": "2"
+              }
+            },
+            {
+              "id": "3",
+              "title": {
+                "en": "3"
+              }
+            },
+            {
+              "id": "4",
+              "title": {
+                "en": "4"
+              }
+            }
+          ]
+        },
+        {
+          "id": "size",
+          "type": "dropdown",
+          "value": "M",
+          "title": {
+            "en": "Size",
+            "nl": "Grootte"
+          },
+          "values": [
+            {
+              "id": "S",
+              "title": {
+                "en": "Small",
+                "nl": "Klein"
+              }
+            },
+            {
+              "id": "M",
+              "title": {
+                "en": "Medium",
+                "nl": "Normaal"
+              }
+            },
+            {
+              "id": "L",
+              "title": {
+                "en": "Large",
+                "nl": "Groot"
+              }
+            }
+          ]
+        }
+      ],
+      "api": {
+        "getState": {
+          "method": "GET",
+          "path": "/state"
+        },
+        "setValue": {
+          "method": "POST",
+          "path": "/set"
+        }
+      },
+      "id": "climate"
+    },
     "controls": {
       "name": {
         "en": "Lights and switches",
@@ -164,6 +270,168 @@
         }
       },
       "id": "controls"
+    },
+    "flows": {
+      "name": {
+        "en": "Flows",
+        "nl": "Flows"
+      },
+      "settings": [
+        {
+          "id": "title",
+          "type": "text",
+          "value": "",
+          "title": {
+            "en": "Title (optional)",
+            "nl": "Titel (optioneel)"
+          }
+        },
+        {
+          "id": "columns",
+          "type": "dropdown",
+          "value": "auto",
+          "title": {
+            "en": "Buttons per row",
+            "nl": "Knoppen per rij"
+          },
+          "values": [
+            {
+              "id": "auto",
+              "title": {
+                "en": "Automatic",
+                "nl": "Automatisch"
+              }
+            },
+            {
+              "id": "1",
+              "title": {
+                "en": "1"
+              }
+            },
+            {
+              "id": "2",
+              "title": {
+                "en": "2"
+              }
+            },
+            {
+              "id": "3",
+              "title": {
+                "en": "3"
+              }
+            },
+            {
+              "id": "4",
+              "title": {
+                "en": "4"
+              }
+            }
+          ]
+        },
+        {
+          "id": "size",
+          "type": "dropdown",
+          "value": "M",
+          "title": {
+            "en": "Size",
+            "nl": "Grootte"
+          },
+          "values": [
+            {
+              "id": "S",
+              "title": {
+                "en": "Small",
+                "nl": "Klein"
+              }
+            },
+            {
+              "id": "M",
+              "title": {
+                "en": "Medium",
+                "nl": "Normaal"
+              }
+            },
+            {
+              "id": "L",
+              "title": {
+                "en": "Large",
+                "nl": "Groot"
+              }
+            }
+          ]
+        },
+        {
+          "id": "flow1",
+          "type": "autocomplete",
+          "title": {
+            "en": "Flow 1",
+            "nl": "Flow 1"
+          }
+        },
+        {
+          "id": "flow2",
+          "type": "autocomplete",
+          "title": {
+            "en": "Flow 2",
+            "nl": "Flow 2"
+          }
+        },
+        {
+          "id": "flow3",
+          "type": "autocomplete",
+          "title": {
+            "en": "Flow 3",
+            "nl": "Flow 3"
+          }
+        },
+        {
+          "id": "flow4",
+          "type": "autocomplete",
+          "title": {
+            "en": "Flow 4",
+            "nl": "Flow 4"
+          }
+        },
+        {
+          "id": "flow5",
+          "type": "autocomplete",
+          "title": {
+            "en": "Flow 5",
+            "nl": "Flow 5"
+          }
+        },
+        {
+          "id": "flow6",
+          "type": "autocomplete",
+          "title": {
+            "en": "Flow 6",
+            "nl": "Flow 6"
+          }
+        },
+        {
+          "id": "flow7",
+          "type": "autocomplete",
+          "title": {
+            "en": "Flow 7",
+            "nl": "Flow 7"
+          }
+        },
+        {
+          "id": "flow8",
+          "type": "autocomplete",
+          "title": {
+            "en": "Flow 8",
+            "nl": "Flow 8"
+          }
+        }
+      ],
+      "api": {
+        "runFlow": {
+          "method": "POST",
+          "path": "/run"
+        }
+      },
+      "id": "flows"
     },
     "gauges": {
       "name": {
