@@ -61,7 +61,8 @@ On a tablet with 4 dashboard columns, six gauges take about the height of one st
 - Water pressure, coloured orange below 1.2 / above 2.5 bar and red below 0.8 / above 3 bar, and the flow temperature
 - Status: heating with modulation, hot water, standby, or the active alarms in red with a **Fault** label
 - Today's flow temperature curve from Homey Insights with the maximum and its time
-- Values: return, hot water and outside temperature and gas use are chosen automatically; tap the card to choose any readable value yourself
+- Values: return, hot water and outside temperature, heat output, flow rate and gas use are chosen automatically; tap the card to choose any readable value yourself
+- Tested against the [Weishaupt WTC app](https://github.com/lucje-81/Homey_weishaupt_direct): burner phase as status ("Burner on · 12.4 kW"), hot water priority shown in blue, fault text from the boiler, and the heating circuits with their target temperature and mode
 
 ## How to use
 

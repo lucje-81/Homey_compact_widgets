@@ -96,33 +96,58 @@
     // Boiler apps all name their values differently: recognise them by id, title and unit
     function text(c) { return (c.id + ' ' + c.title).toLowerCase(); }
     function isTemp(c) { return c.type === 'number' && (/^measure_temperature/.test(c.id) || c.units === '°C' || c.units === '°F'); }
+    function textOf(c) { return c.type === 'string' || c.type === 'enum' || c.type === 'number' ? fmtParts(c, c.value)[0] : ''; }
+    var NOT_SETPOINT = /target|setpoint|setpunt|soll|max|min/;
     var ROLES = {
       room: function (c) { return c.id === 'measure_temperature'; },
-      target: function (c) { return c.setable && /^target_temperature/.test(c.id); },
-      flow: function (c) { return isTemp(c) && /flow|aanvoer|supply|vorlauf|ch_?water|boiler_?temp|ketel|heating_?water|cv_?temp|cv[ -]?water/.test(text(c)) && !/return|retour|target|setpoint|max/.test(text(c)); },
-      ret: function (c) { return isTemp(c) && /return|retour|rücklauf/.test(text(c)); },
+      flow: function (c) { return isTemp(c) && /flow|aanvoer|supply|vorlauf|ch_?water|heating_?water|cv_?temp|cv[ -]?water/.test(text(c)) && !/return|retour|rücklauf/.test(text(c)) && !NOT_SETPOINT.test(text(c)); },
+      boiler: function (c) { return isTemp(c) && /boiler|ketel|kessel/.test(text(c)) && !NOT_SETPOINT.test(text(c)); },
+      ret: function (c) { return isTemp(c) && /return|retour|rücklauf/.test(text(c)) && !NOT_SETPOINT.test(text(c)); },
       outside: function (c) { return isTemp(c) && /outside|outdoor|buiten|exterieur|aussen/.test(text(c)); },
-      dhw: function (c) { return isTemp(c) && /dhw|hot_?water|warm_?water|tap|sanitary|domestic|boiler water|ww/.test(text(c)) && !/target|setpoint/.test(text(c)); },
+      dhw: function (c) { return isTemp(c) && /dhw|hot_?water|warm_?water|tap|sanitary|domestic|ww/.test(text(c)) && !NOT_SETPOINT.test(text(c)); },
+      flowTarget: function (c) { return isTemp(c) && /flow|aanvoer|supply|vorlauf/.test(text(c)) && /target|setpoint|setpunt|soll/.test(text(c)); },
+      roomSetpoint: function (c) { return isTemp(c) && /setpoint|setpunt/.test(text(c)) && !/flow|aanvoer|dhw|warm/.test(text(c)); },
       pressure: function (c) { return c.type === 'number' && (/bar/i.test(c.units || '') || /pressure|druk/.test(text(c))); },
       modulation: function (c) { return c.type === 'number' && /modul/.test(text(c)); },
+      power: function (c) { return c.type === 'number' && c.id === 'measure_power'; },
+      flowRate: function (c) { return c.type === 'number' && (/l\/h|l\/min|m³\/h/i.test(c.units || '') || /flow_?rate|debiet|durchfluss/.test(text(c))); },
+      heat: function (c) { return c.type === 'number' && /kwh/i.test(c.units || '') && /heat|warmte|wärme|total/.test(text(c)); },
       burner: function (c) { return c.type === 'boolean' && /flame|burner|brander|vlam|heating_?active|ch_?active|central_?heating|cv_?actief|cv_?active/.test(text(c)); },
       hotwater: function (c) { return c.type === 'boolean' && /dhw|hot_?water|warm_?water|tapwater|sanitary/.test(text(c)); },
       gas: function (c) { return c.type === 'number' && (/m³|m3/i.test(c.units || '') || /gas/.test(text(c))); },
+      fault: function (c) { return (c.type === 'string' || c.type === 'enum') && /fault|storing|error|fout|störung/.test(text(c)); },
+      phase: function (c) { return (c.type === 'string' || c.type === 'enum') && /burner_?phase|branderfase|brennerphase/.test(text(c)); },
+      mode: function (c) { return (c.type === 'string' || c.type === 'enum') && /mode|modus|betriebsart/.test(text(c)) && !/system/.test(text(c)); },
+      phase2: function (c) { return (c.type === 'string' || c.type === 'enum') && /phase|fase|state|toestand|bedrijf/.test(text(c)) && !/fault|storing|error/.test(text(c)); },
     };
-    function find(d, role) { return d.caps.find(ROLES[role]) || null; }
+    // Most specific capability first: exact ids win over guesses by name
+    var PREFER = { flow: ['measure_temperature.flow', 'measure_temperature.supply', 'measure_temperature.flow1'], boiler: ['measure_temperature.boiler'] };
+    function find(d, role) {
+      var pref = PREFER[role] || [];
+      for (var i = 0; i < pref.length; i++) { var p = cap(d, pref[i]); if (p) return p; }
+      return d.caps.find(ROLES[role]) || null;
+    }
+    // A −/+ target only when the device has one clear target temperature
+    function targetOf(d) {
+      var exact = d.caps.find(function (c) { return c.setable && c.id === 'target_temperature'; });
+      if (exact) return exact;
+      var all = d.caps.filter(function (c) { return c.setable && /^target_temperature/.test(c.id); });
+      return all.length === 1 ? all[0] : null;
+    }
     function alarms(d) { return d.caps.filter(function (c) { return c.type === 'boolean' && /^alarm_/.test(c.id) && c.value === true; }); }
 
     function excludeOf(d) {
       var ex = [];
-      ['room', 'target', 'pressure', 'burner', 'hotwater'].forEach(function (r) { var c = find(d, r); if (c) ex.push(c.id); });
-      var m = find(d, 'modulation'); if (m) ex.push(m.id);
-      var f = find(d, 'flow'); if (f) ex.push(f.id);
+      ['room', 'flow', 'pressure', 'burner', 'hotwater', 'modulation', 'fault', 'phase', 'phase2', 'mode'].forEach(function (r) { var c = find(d, r); if (c) ex.push(c.id); });
+      var t = targetOf(d); if (t) ex.push(t.id);
+      if (!find(d, 'room') && !find(d, 'flow')) { var b = find(d, 'boiler'); if (b) ex.push(b.id); }
+      d.caps.forEach(function (c) { if (/^alarm_/.test(c.id)) ex.push(c.id); });
       return ex;
     }
 
     function autoFields(d, exclude) {
       var out = [];
-      ['flow', 'ret', 'dhw', 'outside', 'gas'].forEach(function (r) {
+      ['flow', 'ret', 'dhw', 'outside', 'boiler', 'power', 'flowTarget', 'flowRate', 'heat', 'gas'].forEach(function (r) {
         var c = find(d, r);
         if (c && exclude.indexOf(c.id) < 0 && out.indexOf(c.id) < 0) out.push(c.id);
       });
@@ -203,14 +228,23 @@
 
     function cardHtml(d, idx, width) {
       if (d.missing) return '<div class="card na"><div class="name">' + esc(Homey.__('missing')) + '</div></div>';
-      var room = find(d, 'room'), target = find(d, 'target'), flow = find(d, 'flow'), pressure = find(d, 'pressure');
-      var mod = find(d, 'modulation'), burner = find(d, 'burner'), hw = find(d, 'hotwater');
+      var room = find(d, 'room'), target = targetOf(d), flow = find(d, 'flow') || (room ? null : find(d, 'boiler')), pressure = find(d, 'pressure');
+      var mod = find(d, 'modulation'), burner = find(d, 'burner'), hw = find(d, 'hotwater'), power = find(d, 'power');
+      var phase = find(d, 'phase') || find(d, 'phase2') || find(d, 'mode'), fault = find(d, 'fault');
       var modVal = mod ? Number(mod.value) : null;
       var burning = (burner && burner.value === true) || (modVal !== null && modVal > 0);
+      // "Brander aan: geregeld bedrijf" → "Brander aan" (full text stays in the tooltip)
+      var phaseFull = phase && phase.value != null ? textOf(phase) : '';
+      var phaseText = phaseFull.split(':')[0];
+      var hotWater = (hw && hw.value === true) || d.caps.some(function (c) {
+        return (c.type === 'string' || c.type === 'enum') && /warm ?water|hot ?water|dhw|tapwater/i.test(textOf(c)) && !/fault|storing/.test(text(c)) && !/setpunt|setpoint|target/i.test(c.title);
+      });
       var al = alarms(d);
+      var hasAlarmCaps = d.caps.some(function (c) { return /^alarm_/.test(c.id); });
+      var faultText = fault && fault.value && (al.length || !hasAlarmCaps) && !/^(geen|none|no|ok|keine?)\b/i.test(textOf(fault)) ? textOf(fault) : '';
       var html = '<div class="card' + (d.available === false ? ' na' : '') + '" data-id="' + esc(d.id) + '">';
       html += '<div class="head">' + ICON_BOILER(burning, ORANGE) + '<span class="name">' + esc(d.name) + '</span>'
-        + (al.length ? '<span class="chip alarm">' + esc(Homey.__('fault')) + '</span>' : '') + '</div>';
+        + (al.length || faultText ? '<span class="chip alarm">' + esc(Homey.__('fault')) + '</span>' : '') + '</div>';
 
       var main = room || flow;
       html += '<div class="main"><span><span class="big">' + (main ? esc(deg(main.value)) : '–') + '</span>'
@@ -230,10 +264,17 @@
       html += '</div>';
 
       var st;
-      if (al.length) st = '<div class="status" style="color:' + RED + '">' + ICON_ALARM + '<span>' + esc(al.map(function (a) { return a.title; }).join(', ')) + '</span></div>';
-      else if (hw && hw.value === true) st = '<div class="status" style="color:' + BLUE + '">' + ICON_TAP + '<span>' + esc(Homey.__('hotWater')) + (modVal ? ' · ' + loc(modVal, 0) + ' %' : '') + '</span></div>';
-      else if (burning) st = '<div class="status" style="color:' + ORANGE + '">' + svg(FLAME, ORANGE) + '<span>' + esc(Homey.__('heating')) + (modVal ? ' · ' + esc(Homey.__('modulation')) + ' ' + loc(modVal, 0) + ' %' : '') + '</span></div>';
-      else if (burner || mod) st = '<div class="status" style="opacity:.7">' + ICON_IDLE + '<span>' + esc(Homey.__('standby')) + '</span></div>';
+      var extra = modVal ? ' · ' + Homey.__('modulation') + ' ' + loc(modVal, 0) + ' %'
+        : power && Number(power.value) > 0 ? ' · ' + fmt(power, power.value) : '';
+      if (al.length || faultText) {
+        st = '<div class="status" style="color:' + RED + '">' + ICON_ALARM + '<span>' + esc(faultText || al.map(function (a) { return a.title; }).join(', ')) + '</span></div>';
+      } else if (burning && hotWater) {
+        st = '<div class="status" style="color:' + BLUE + '">' + ICON_TAP + '<span>' + esc(Homey.__('hotWater')) + esc(extra) + '</span></div>';
+      } else if (burning) {
+        st = '<div class="status" style="color:' + ORANGE + '" title="' + esc(phaseFull) + '">' + svg(FLAME, ORANGE) + '<span>' + esc(phaseText || Homey.__('heating')) + esc(extra) + '</span></div>';
+      } else if (burner || mod || phase) {
+        st = '<div class="status" style="opacity:.7">' + ICON_IDLE + '<span>' + esc(phaseText || Homey.__('standby')) + '</span></div>';
+      }
       if (st) html += st;
 
       html += curveHtml(d, idx, curveCap(d));
@@ -243,7 +284,7 @@
       return html + '</div>';
     }
 
-    function curveCap(d) { return find(d, 'flow') || find(d, 'room'); }
+    function curveCap(d) { return find(d, 'flow') || find(d, 'boiler') || find(d, 'room'); }
 
     function render() {
       var root = document.getElementById('root');

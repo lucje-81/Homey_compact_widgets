@@ -204,7 +204,8 @@ class CompactWidgetsApp extends Homey.App {
         const caps = [];
         for (const [capId, cap] of Object.entries(device.capabilitiesObj || {})) {
           const adjustable = capId === 'target_temperature' || capId.startsWith('target_temperature.');
-          if (!cap || cap.getable === false || (cap.setable && !adjustable) || SKIP_ENERGY.includes(capId)) continue;
+          // Setable enums (e.g. a heating mode) are shown as a value, never set from these widgets
+          if (!cap || cap.getable === false || (cap.setable && !adjustable && cap.type !== 'enum') || SKIP_ENERGY.includes(capId)) continue;
           if (!['number', 'string', 'enum', 'boolean'].includes(cap.type)) continue;
           if (caps.length >= ENERGY_MAX_CAPS) break;
           const key = `${id}|${capId}`;
@@ -216,7 +217,7 @@ class CompactWidgetsApp extends Homey.App {
             id: capId,
             title: cap.title || capId,
             type: cap.type,
-            units: cap.units || '',
+            units: typeof cap.units === 'object' && cap.units ? (cap.units.en || Object.values(cap.units)[0] || '') : (cap.units || ''),
             decimals: typeof cap.decimals === 'number' ? cap.decimals : null,
             values: Array.isArray(cap.values) ? cap.values.map((v) => ({ id: v.id, title: v.title || v.id })) : undefined,
             value: key in this.values ? this.values[key] : cap.value,

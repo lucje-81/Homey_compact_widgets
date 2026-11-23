@@ -1,4 +1,8 @@
 {
+  "0.8.1": {
+    "en": "Boiler widget tuned for the Weishaupt WTC app: burner phase, hot water priority, fault text, heat output, flow rate, circuit mode",
+    "nl": "Ketelwidget afgestemd op de Weishaupt WTC-app: branderfase, warmwatervoorrang, storingstekst, warmtevermogen, debiet, modus van de kring"
+  },
   "0.8.0": {
     "en": "New widget: Boiler (room and target temperature with − / +, water pressure, flow temperature, burner and hot water state, faults, today's curve)",
     "nl": "Nieuwe widget: Verwarmingsketel (kamer- en doeltemperatuur met − / +, waterdruk, aanvoertemperatuur, brander en warm water, storingen, dagcurve)"
