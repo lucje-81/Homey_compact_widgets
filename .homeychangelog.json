@@ -1,4 +1,8 @@
 {
+  "0.11.0": {
+    "en": "Import endpoint for the Flow Mover app (take over panels, icons and chosen values from another Homey)",
+    "nl": "Importfunctie voor de Flow-verhuizer (panelen, iconen en gekozen waarden overnemen van een andere Homey)"
+  },
   "0.10.0": {
     "en": "Thermostats: on/off button. Icons for the Climate widget are now chosen in the app settings (Icons tab) instead of in the widget",
     "nl": "Thermostaten: aan/uit-knop. Iconen voor de klimaatwidget kies je nu in de app-instellingen (tabblad Iconen) in plaats van in de widget"

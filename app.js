@@ -283,6 +283,23 @@ class CompactWidgetsApp extends Homey.App {
     return data;
   }
 
+  /**
+   * Settings from another Homey (Flow Mover app): gauge panels, icons and chosen values,
+   * with the device ids already converted. Only these keys are accepted.
+   */
+  async importSettings(body) {
+    const allowed = { panels: Array.isArray, icons: (v) => v && typeof v === 'object' && !Array.isArray(v), energyFields: (v) => v && typeof v === 'object' && !Array.isArray(v) };
+    const done = [];
+    for (const [key, check] of Object.entries(allowed)) {
+      if (body && body[key] !== undefined) {
+        if (!check(body[key])) throw new Error(`Invalid ${key}`);
+        this.homey.settings.set(key, body[key]);
+        done.push(key);
+      }
+    }
+    return { imported: done };
+  }
+
   /** Icon chosen for a device in a widget (stored app-wide, so every dashboard shows the same icon). */
   async setIcon({ deviceId, icon }) {
     if (!deviceId || !ICON_CHOICES.includes(icon)) throw new Error('Not allowed');
