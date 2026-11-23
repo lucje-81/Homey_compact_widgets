@@ -77,5 +77,18 @@
   "icon_shutter": "Rolluik",
   "icon_awning": "Zonnescherm",
   "icon_thermostat": "Thermostaat",
-  "icon_power": "Schakelaar"
+  "icon_power": "Schakelaar",
+  "yes": "Ja",
+  "no": "Nee",
+  "charging": "Laden",
+  "discharging": "Ontladen",
+  "idle": "Rust",
+  "today": "Vandaag",
+  "peak": "Piek",
+  "automatic": "Automatisch",
+  "done": "Klaar",
+  "missing": "Toestel niet gevonden",
+  "fieldsHint": "Tik de waarden aan die je wilt zien, in de volgorde waarin je ze aantikt.",
+  "fieldsHintAuto": "Nu automatisch gekozen. Tik waarden aan of uit om zelf te kiezen.",
+  "chooseEnergy": "Kies je omvormer(s) en thuisbatterij in de instellingen van deze widget."
 }

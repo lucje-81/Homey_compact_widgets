@@ -1,4 +1,8 @@
 {
+  "0.7.0": {
+    "en": "New widget: Inverter and battery (power, today's energy, today's curve, battery level, charging/discharging and values of your choice)",
+    "nl": "Nieuwe widget: Omvormer en batterij (vermogen, opbrengst vandaag, dagcurve, laadtoestand, laden/ontladen en zelf gekozen waarden)"
+  },
   "0.6.0": {
     "en": "Garage doors and gates in the Climate widget, with icons per type (sectional, up-and-over, roller, swing and sliding gate) that show the open state",
     "nl": "Garagepoorten en poorten in de Klimaat-widget, met iconen per type (sectionaal-, kantel-, oprol-, draai- en schuifpoort) die de stand tonen"

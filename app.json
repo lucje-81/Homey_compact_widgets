@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "compact.widgets",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": [
@@ -274,6 +274,122 @@
         }
       },
       "id": "controls"
+    },
+    "energy": {
+      "name": {
+        "en": "Inverter and battery",
+        "nl": "Omvormer en batterij"
+      },
+      "devices": {
+        "type": "global",
+        "singular": false,
+        "filter": {
+          "capabilities": "measure_power"
+        }
+      },
+      "settings": [
+        {
+          "id": "title",
+          "type": "text",
+          "value": "",
+          "title": {
+            "en": "Title (optional)",
+            "nl": "Titel (optioneel)"
+          }
+        },
+        {
+          "id": "columns",
+          "type": "dropdown",
+          "value": "auto",
+          "title": {
+            "en": "Cards per row",
+            "nl": "Kaarten per rij"
+          },
+          "values": [
+            {
+              "id": "auto",
+              "title": {
+                "en": "Automatic",
+                "nl": "Automatisch"
+              }
+            },
+            {
+              "id": "1",
+              "title": {
+                "en": "1"
+              }
+            },
+            {
+              "id": "2",
+              "title": {
+                "en": "2"
+              }
+            },
+            {
+              "id": "3",
+              "title": {
+                "en": "3"
+              }
+            }
+          ]
+        },
+        {
+          "id": "size",
+          "type": "dropdown",
+          "value": "M",
+          "title": {
+            "en": "Size",
+            "nl": "Grootte"
+          },
+          "values": [
+            {
+              "id": "S",
+              "title": {
+                "en": "Small",
+                "nl": "Klein"
+              }
+            },
+            {
+              "id": "M",
+              "title": {
+                "en": "Medium",
+                "nl": "Normaal"
+              }
+            },
+            {
+              "id": "L",
+              "title": {
+                "en": "Large",
+                "nl": "Groot"
+              }
+            }
+          ]
+        },
+        {
+          "id": "curve",
+          "type": "checkbox",
+          "value": true,
+          "title": {
+            "en": "Show today's power curve",
+            "nl": "Vermogenscurve van vandaag tonen"
+          }
+        }
+      ],
+      "api": {
+        "getState": {
+          "method": "GET",
+          "path": "/state"
+        },
+        "getHistory": {
+          "method": "GET",
+          "path": "/history"
+        },
+        "setFields": {
+          "method": "POST",
+          "path": "/fields"
+        }
+      },
+      "id": "energy"
     },
     "flows": {
       "name": {

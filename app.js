@@ -16,6 +16,11 @@ const READ_ONLY = ['measure_temperature', 'alarm_contact'];
 const ACTION_CAPABILITIES = ['button'];
 const SETTABLE = [...CONTROL_CAPABILITIES.filter((c) => !READ_ONLY.includes(c)), ...ACTION_CAPABILITIES];
 const ICONS_KEY = 'icons';
+const FIELDS_KEY = 'energyFields';
+const ENERGY_MAX_CAPS = 60;
+const SKIP_ENERGY = ['onoff', 'growatt_onoff', 'button'];
+const HISTORY_TTL = 4 * 60 * 1000;
+const LOGS_TTL = 15 * 60 * 1000;
 const ICON_CHOICES = ['auto', 'thermostat', 'shutter', 'awning', 'sectional', 'tilt', 'roller', 'swing', 'sliding', 'power'];
 const FLOW_SLOTS = ['flow1', 'flow2', 'flow3', 'flow4', 'flow5', 'flow6', 'flow7', 'flow8'];
 const FLUSH_MS = 300;
@@ -41,6 +46,7 @@ class CompactWidgetsApp extends Homey.App {
 
     this.homey.settings.on('set', (key) => {
       if (key === ICONS_KEY) this.homey.api.realtime('icons', this.homey.settings.get(ICONS_KEY) || {});
+      if (key === FIELDS_KEY) this.homey.api.realtime('fields', this.homey.settings.get(FIELDS_KEY) || {});
       if (key !== PANELS_KEY) return;
       // subscribe to new values first, then tell open widgets to reload their panel
       this.queueSync().then(() => this.homey.api.realtime('panels', { updated: Date.now() }));
@@ -186,6 +192,89 @@ class CompactWidgetsApp extends Homey.App {
     }
     if (added) await this.queueSync();
     return { devices, language: this.homey.i18n.getLanguage(), icons: this.homey.settings.get(ICONS_KEY) || {} };
+  }
+
+  /** Everything readable of inverters and batteries for the "Inverter and battery" widget; subscribes to it. */
+  async getEnergyState(ids) {
+    const devices = [];
+    let added = false;
+    for (const id of ids) {
+      try {
+        const device = await this.api.devices.getDevice({ id });
+        const caps = [];
+        for (const [capId, cap] of Object.entries(device.capabilitiesObj || {})) {
+          if (!cap || cap.getable === false || cap.setable || SKIP_ENERGY.includes(capId)) continue;
+          if (!['number', 'string', 'enum', 'boolean'].includes(cap.type)) continue;
+          if (caps.length >= ENERGY_MAX_CAPS) break;
+          const key = `${id}|${capId}`;
+          if (!this.controlKeys.has(key)) {
+            this.controlKeys.add(key);
+            added = true;
+          }
+          caps.push({
+            id: capId,
+            title: cap.title || capId,
+            type: cap.type,
+            units: cap.units || '',
+            decimals: typeof cap.decimals === 'number' ? cap.decimals : null,
+            values: Array.isArray(cap.values) ? cap.values.map((v) => ({ id: v.id, title: v.title || v.id })) : undefined,
+            value: key in this.values ? this.values[key] : cap.value,
+          });
+        }
+        devices.push({
+          id, name: device.name, class: device.class, virtualClass: device.virtualClass || null,
+          energy: device.energyObj || device.energy || null, caps, available: device.available !== false,
+        });
+      } catch (err) {
+        devices.push({ id, name: '?', missing: true, caps: [] });
+      }
+    }
+    if (added) await this.queueSync();
+    return {
+      devices,
+      language: this.homey.i18n.getLanguage(),
+      fields: this.homey.settings.get(FIELDS_KEY) || {},
+    };
+  }
+
+  /** Values chosen for a device in the energy widget (stored app-wide; empty list = automatic). */
+  async setEnergyFields({ deviceId, fields }) {
+    if (!deviceId || !Array.isArray(fields)) throw new Error('Not allowed');
+    const all = { ...(this.homey.settings.get(FIELDS_KEY) || {}) };
+    const clean = fields.filter((f) => typeof f === 'string' && f.length < 100).slice(0, 24);
+    if (clean.length) all[deviceId] = clean;
+    else delete all[deviceId];
+    this.homey.settings.set(FIELDS_KEY, all);
+    return all;
+  }
+
+  /** Today's values of one capability from Homey Insights (for the day curve); null when not available. */
+  async getHistory(deviceId, capabilityId) {
+    const cacheKey = `${deviceId}|${capabilityId}`;
+    this.historyCache = this.historyCache || {};
+    const cached = this.historyCache[cacheKey];
+    if (cached && Date.now() - cached.time < HISTORY_TTL) return cached.data;
+    let data = null;
+    try {
+      if (!this.logsCache || Date.now() - this.logsCache.time > LOGS_TTL) {
+        this.logsCache = { time: Date.now(), logs: Object.values(await this.api.insights.getLogs()) };
+      }
+      const fullId = `homey:device:${deviceId}:${capabilityId}`;
+      const log = this.logsCache.logs.find((l) => l.id === fullId
+        || (l.ownerUri === `homey:device:${deviceId}` && l.ownerId === capabilityId));
+      if (log) {
+        const entries = await this.api.insights.getLogEntries({ id: log.id, resolution: 'today' })
+          .catch(() => this.api.insights.getLogEntries({ uri: log.ownerUri || log.uri, id: log.ownerId || capabilityId, resolution: 'today' }));
+        const values = (entries && entries.values) || [];
+        data = values
+          .filter((e) => e && e.v !== null && e.v !== undefined)
+          .map((e) => [new Date(e.t).getTime(), Math.round(Number(e.v) * 100) / 100]);
+      }
+    } catch (err) {
+      this.error(`History ${cacheKey}: ${err.message}`);
+    }
+    this.historyCache[cacheKey] = { time: Date.now(), data };
+    return data;
   }
 
   /** Icon chosen for a device in a widget (stored app-wide, so every dashboard shows the same icon). */

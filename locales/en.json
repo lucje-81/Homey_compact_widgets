@@ -77,5 +77,18 @@
   "icon_shutter": "Roller shutter",
   "icon_awning": "Awning",
   "icon_thermostat": "Thermostat",
-  "icon_power": "Switch"
+  "icon_power": "Switch",
+  "yes": "Yes",
+  "no": "No",
+  "charging": "Charging",
+  "discharging": "Discharging",
+  "idle": "Idle",
+  "today": "Today",
+  "peak": "Peak",
+  "automatic": "Automatic",
+  "done": "Done",
+  "missing": "Device not found",
+  "fieldsHint": "Tap the values you want to see, in the order you tap them.",
+  "fieldsHintAuto": "Chosen automatically now. Tap values on or off to choose yourself.",
+  "chooseEnergy": "Choose your inverter(s) and home battery in this widget's settings."
 }

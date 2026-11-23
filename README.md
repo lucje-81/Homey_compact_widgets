@@ -45,6 +45,15 @@ On a tablet with 4 dashboard columns, six gauges take about the height of one st
 - Choose them in the widget settings by typing part of the name
 - Tap: spinner while starting, green ✓ when done, red ✗ on error
 
+## Inverter and battery widget (v0.7)
+
+- One card per device; works with any inverter or home battery in Homey that has `measure_power` (Growatt, SolarEdge, Huawei, SMA, Enphase, …)
+- **Inverter**: current power large, energy of today next to it, the battery level as a small chip when the inverter has one
+- **Battery**: state of charge large with a coloured bar (green / orange / red), charging ▲ or discharging ▼ with the power (positive `measure_power` = charging, or `battery_charging_state` when present)
+- **Today's curve** from Homey Insights with the peak and its time; for batteries charging is green above and discharging orange below the zero line (can be switched off in the widget settings)
+- **Values**: up to 6 are chosen automatically (total energy, voltage, current, string power, temperature, frequency; for batteries charged/discharged energy, voltage, temperature). Tap a card to choose any readable value of the device yourself, in the order you tap them; the choice is stored per device in the app
+- Cards per row: automatic or 1–3; size small/medium/large
+
 ## How to use
 
 1. Install the app (see below).

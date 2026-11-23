@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { margin: 0; color: var(--homey-text-color, #222);
+      font-family: var(--homey-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+      -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+    .title { font-size: 14px; font-weight: 600; margin: 0 0 4px 2px; }
+    .grid { display: grid; gap: 6px; --big: 24px; --name: 13px; --val: 13px; }
+    .grid.size-S { --big: 20px; --name: 12px; --val: 12px; }
+    .grid.size-L { --big: 30px; --name: 14px; --val: 15px; }
+    .card { min-width: 0; padding: 8px 10px 9px; border-radius: 12px; background: rgba(127,127,127,.12); cursor: pointer; }
+    .card.na { opacity: .5; }
+    .head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .head svg { flex: none; width: 22px; height: 22px; }
+    .name { flex: 1; min-width: 0; font-size: var(--name); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chip { flex: none; font-size: 11px; font-weight: 600; padding: 2px 6px 2px 4px; border-radius: 9px; background: rgba(127,127,127,.18);
+      display: flex; align-items: center; gap: 3px; font-variant-numeric: tabular-nums; }
+    .chip svg { width: 16px; height: 16px; }
+    .main { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: 4px; }
+    .big { font-size: var(--big); font-weight: 650; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .big small { font-size: .55em; font-weight: 600; margin-left: 2px; opacity: .8; }
+    .side { text-align: right; min-width: 0; }
+    .side .l { font-size: 10.5px; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .side .v { font-size: var(--val); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .bat { position: relative; height: 8px; border-radius: 4px; background: rgba(127,127,127,.22); margin-top: 7px; overflow: hidden; }
+    .bat i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+    .curve { display: block; width: 100%; height: 34px; margin-top: 7px; overflow: visible; }
+    .curve-meta { display: flex; justify-content: space-between; font-size: 10px; opacity: .55; margin-top: 1px; font-variant-numeric: tabular-nums; }
+    .stats { display: grid; grid-template-columns: repeat(var(--sc, 2), minmax(0, 1fr)); gap: 5px 10px; margin-top: 8px; }
+    .stat { min-width: 0; }
+    .stat .l { font-size: 10.5px; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat .v { font-size: var(--val); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+    .edit { margin-top: 9px; padding-top: 8px; border-top: 1px solid rgba(127,127,127,.25); cursor: default; }
+    .edit .hint { font-size: 11px; opacity: .7; margin-bottom: 6px; }
+    .opts { display: flex; flex-wrap: wrap; gap: 5px; }
+    .opt { font-size: 12px; padding: 6px 9px; border-radius: 14px; background: rgba(127,127,127,.18); cursor: pointer; max-width: 100%;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .opt span { opacity: .6; margin-left: 4px; font-variant-numeric: tabular-nums; }
+    .opt.sel { background: #3a7bd5; color: #fff; }
+    .opt.sel span { opacity: .85; }
+    .opt b { display: inline-block; min-width: 14px; font-size: 10px; margin-right: 3px; }
+    .actions { display: flex; gap: 6px; margin-top: 8px; }
+    .actions button { flex: 1; height: 36px; border: none; border-radius: 10px; background: rgba(127,127,127,.2); color: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .actions button.primary { background: #3a7bd5; color: #fff; }
+    .message { font-size: 13px; opacity: .75; padding: 8px 2px; line-height: 1.4; }
+  </style>
+</head>
+<body class="homey-widget-small">
+  <div id="root"></div>
+  <script>
+    var MIN_WIDTH = { S: 190, M: 220, L: 270 };
+    var MAX_AUTO = 6;
+    var GREEN = '#3f9b2d', ORANGE = '#e0861d', RED = '#e0433f', SUN = '#f0a81c', BLUE = '#3a7bd5';
+    var state = { devices: [], settings: {}, fields: {}, history: {}, editing: null, draft: null, ready: false, lastHeight: 0, language: undefined };
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function dev(id) { return state.devices.find(function (d) { return d.id === id; }); }
+    function cap(d, id) { return d.caps.find(function (c) { return c.id === id; }); }
+    function val(d, id) { var c = cap(d, id); return c ? c.value : null; }
+    function loc(v, dec) {
+      try { return Number(v).toLocaleString(state.language || undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
+      catch (e) { return Number(v).toFixed(dec); }
+    }
+    function autoDec(v) { var a = Math.abs(v); return a >= 100 ? 0 : a >= 10 ? 1 : 2; }
+
+    /** [number text, unit] for a capability value */
+    function fmtParts(c, v) {
+      if (v === null || v === undefined || v === '') return ['–', ''];
+      if (c.type === 'boolean') return [Homey.__(v ? 'yes' : 'no'), ''];
+      if (c.type !== 'number') {
+        var e = (c.values || []).find(function (x) { return x.id === v; });
+        return [e ? e.title : String(v), ''];
+      }
+      var n = Number(v);
+      if (isNaN(n)) return ['–', ''];
+      var u = c.units || '';
+      if (u === 'W' && Math.abs(n) >= 1000) return [loc(n / 1000, Math.abs(n) >= 10000 ? 1 : 2), 'kW'];
+      if (u === 'W') return [loc(n, 0), 'W'];
+      if (u === 'kWh') return [loc(n, Math.abs(n) >= 1000 ? 0 : Math.abs(n) >= 100 ? 1 : 2), 'kWh'];
+      var dec = c.decimals !== null && c.decimals !== undefined ? Math.min(c.decimals, autoDec(n)) : autoDec(n);
+      if (Number.isInteger(n) && (c.decimals === 0 || u === '%' || u === '')) dec = 0;
+      return [loc(n, dec), u];
+    }
+    function fmt(c, v) { var p = fmtParts(c, v); return p[1] ? p[0] + (p[1] === '%' ? ' %' : ' ' + p[1]) : p[0]; }
+    function fmtW(v) { return fmt({ type: 'number', units: 'W' }, v); }
+
+    function isBattery(d) { return (d.virtualClass || d.class) === 'battery' || (!!cap(d, 'measure_battery') && (d.virtualClass || d.class) !== 'solarpanel'); }
+
+    // "Today" energy shown next to the power of an inverter
+    function dailyCap(d) {
+      var re = /^meter_power\.(.*)$/;
+      return d.caps.find(function (c) {
+        var m = re.exec(c.id);
+        return m && /daily|today|day|dag|vandaag/i.test(m[1]) && !/grid|import|export|load|batt|charge|discharg|pv\d/i.test(m[1]);
+      }) || null;
+    }
+
+    function autoFields(d, exclude) {
+      var order = isBattery(d)
+        ? [/^meter_power\./, /^measure_voltage/, /^measure_current/, /^measure_temperature/, /^measure_/, /^meter_/, /./]
+        : [/^meter_power$|^meter_power\.(total|pv_total)/i, /^measure_voltage/, /^measure_current/, /^measure_power\.(pv|input|string)/i,
+          /^measure_temperature/, /^measure_battery$/, /^measure_frequency/, /^measure_power\./, /^meter_power\./];
+      var out = [];
+      order.forEach(function (re) {
+        d.caps.forEach(function (c) {
+          if (out.length >= MAX_AUTO || exclude.indexOf(c.id) >= 0 || out.indexOf(c.id) >= 0) return;
+          if (c.type === 'number' && re.test(c.id)) out.push(c.id);
+        });
+      });
+      return out;
+    }
+
+    function shownFields(d, exclude) {
+      var chosen = state.fields[d.id];
+      if (chosen && chosen.length) return chosen.filter(function (id) { return cap(d, id); });
+      return autoFields(d, exclude);
+    }
+
+    function columns(n) {
+      var s = state.settings;
+      if (s.columns && s.columns !== 'auto') return Math.min(Number(s.columns), Math.max(1, n));
+      var width = document.getElementById('root').clientWidth || window.innerWidth;
+      return Math.max(1, Math.min(Math.floor((width + 6) / ((MIN_WIDTH[s.size] || MIN_WIDTH.M) + 6)), n, 3));
+    }
+
+    var PANEL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">'
+      + '<path d="M5 12h14l2.5 8h-19z"/><path d="M4.2 16h15.6M9.6 12l-1 8M14.4 12l1 8"/>'
+      + '<circle cx="12" cy="5.5" r="2.2"/><path d="M12 1.2v.8M16.3 5.5h.8M7.7 5.5h-.8M15 2.5l.6-.6M9 2.5l-.6-.6"/></svg>';
+    function batteryIcon(soc, colour) {
+      var w = Math.max(0, Math.min(1, (soc || 0) / 100)) * 14;
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="7" width="17" height="10" rx="2"/>'
+        + '<path d="M21.5 10.5v3" stroke-linecap="round"/><rect x="4" y="8.5" width="' + w.toFixed(1) + '" height="7" rx="1" fill="' + colour + '" stroke="none"/></svg>';
+    }
+    function socColour(soc) { return soc >= 50 ? GREEN : soc >= 20 ? ORANGE : RED; }
+
+    function curveHtml(d, idx, signed, colour) {
+      var pts = state.history[d.id];
+      if (state.settings.curve === false || !pts || pts.length < 2) return '';
+      var start = new Date(); start.setHours(0, 0, 0, 0);
+      var t0 = start.getTime(), span = 24 * 3600 * 1000;
+      var max = 0, min = 0, peak = null;
+      pts.forEach(function (p) { if (p[1] > max) max = p[1]; if (p[1] < min) min = p[1]; if (!peak || p[1] > peak[1]) peak = p; });
+      if (max - min < 1) max = min + 1;
+      var H = 34, W = 240;
+      var y = function (v) { return (H - ((v - min) / (max - min)) * H).toFixed(1); };
+      var x = function (t) { return (Math.max(0, Math.min(1, (t - t0) / span)) * W).toFixed(1); };
+      var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + x(p[0]) + ' ' + y(p[1]); }).join('');
+      var zero = y(0);
+      var area = line + 'L' + x(pts[pts.length - 1][0]) + ' ' + zero + 'L' + x(pts[0][0]) + ' ' + zero + 'Z';
+      var svg = '<svg class="curve" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">';
+      if (signed && min < 0) {
+        svg += '<defs><clipPath id="up' + idx + '"><rect x="0" y="-2" width="' + W + '" height="' + (Number(zero) + 2) + '"/></clipPath>'
+          + '<clipPath id="dn' + idx + '"><rect x="0" y="' + zero + '" width="' + W + '" height="' + (H - zero + 2) + '"/></clipPath></defs>'
+          + '<path d="' + area + '" fill="' + GREEN + '" fill-opacity=".28" clip-path="url(#up' + idx + ')"/>'
+          + '<path d="' + area + '" fill="' + ORANGE + '" fill-opacity=".28" clip-path="url(#dn' + idx + ')"/>'
+          + '<path d="M0 ' + zero + 'H' + W + '" stroke="currentColor" stroke-opacity=".3" stroke-width="1" vector-effect="non-scaling-stroke"/>';
+      } else {
+        svg += '<path d="' + area + '" fill="' + colour + '" fill-opacity=".25"/>';
+      }
+      svg += '<path d="' + line + '" fill="none" stroke="' + colour + '" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>';
+      // quarters of the day
+      [6, 12, 18].forEach(function (h) { svg += '<path d="M' + (W * h / 24) + ' ' + H + 'v-3" stroke="currentColor" stroke-opacity=".35" stroke-width="1" vector-effect="non-scaling-stroke"/>'; });
+      svg += '</svg>';
+      var when = new Date(peak[0]);
+      var hhmm = ('0' + when.getHours()).slice(-2) + ':' + ('0' + when.getMinutes()).slice(-2);
+      return svg + '<div class="curve-meta"><span>' + esc(Homey.__('today')) + '</span><span>' + esc(Homey.__('peak')) + ' ' + esc(fmtW(peak[1])) + ' · ' + hhmm + '</span></div>';
+    }
+
+    function statsHtml(d, ids, cols) {
+      if (!ids.length) return '';
+      return '<div class="stats" style="--sc:' + cols + '">' + ids.map(function (id) {
+        var c = cap(d, id);
+        return '<div class="stat"><div class="l">' + esc(c.title) + '</div><div class="v" data-v="' + esc(d.id + '|' + id) + '">' + esc(fmt(c, c.value)) + '</div></div>';
+      }).join('') + '</div>';
+    }
+
+    function editHtml(d, exclude) {
+      var sel = state.draft;
+      var auto = !sel.length;
+      var current = auto ? autoFields(d, exclude) : sel;
+      return '<div class="edit"><div class="hint">' + esc(Homey.__(auto ? 'fieldsHintAuto' : 'fieldsHint')) + '</div><div class="opts">'
+        + d.caps.filter(function (c) { return exclude.indexOf(c.id) < 0; }).map(function (c) {
+          var i = current.indexOf(c.id);
+          return '<span class="opt' + (i >= 0 ? ' sel' : '') + '" data-opt="' + esc(c.id) + '">' + (i >= 0 ? '<b>' + (i + 1) + '</b>' : '')
+            + esc(c.title) + '<span>' + esc(fmt(c, c.value)) + '</span></span>';
+        }).join('') + '</div>'
+        + '<div class="actions"><button data-do="auto">' + esc(Homey.__('automatic')) + '</button><button class="primary" data-do="done">' + esc(Homey.__('done')) + '</button></div></div>';
+    }
+
+    function excludeOf(d) {
+      var ex = ['measure_power', 'measure_battery', 'battery_charging_state'];
+      var daily = isBattery(d) ? null : dailyCap(d);
+      if (daily) ex.push(daily.id);
+      return ex;
+    }
+
+    function cardHtml(d, idx, width) {
+      if (d.missing) return '<div class="card na"><div class="name">' + esc(Homey.__('missing')) + '</div></div>';
+      var statCols = width >= 330 ? 3 : 2;
+      var power = cap(d, 'measure_power');
+      var p = power ? Number(power.value) || 0 : 0;
+      var html = '<div class="card' + (d.available === false ? ' na' : '') + '" data-id="' + esc(d.id) + '">';
+      var exclude = ['measure_power'];
+      var curveColour = SUN;
+      var signed = false;
+      if (isBattery(d)) {
+        var soc = Number(val(d, 'measure_battery'));
+        var hasSoc = cap(d, 'measure_battery') && !isNaN(soc);
+        var cs = val(d, 'battery_charging_state');
+        var mode = cs === 'charging' || cs === 'discharging' || cs === 'idle' ? cs : (p > 20 ? 'charging' : p < -20 ? 'discharging' : 'idle');
+        var colour = mode === 'charging' ? GREEN : mode === 'discharging' ? ORANGE : 'currentColor';
+        exclude.push('measure_battery', 'battery_charging_state');
+        html += '<div class="head">' + batteryIcon(hasSoc ? soc : 0, hasSoc ? socColour(soc) : '#888') + '<span class="name">' + esc(d.name) + '</span></div>'
+          + '<div class="main"><span class="big">' + (hasSoc ? loc(soc, 0) + '<small>%</small>' : esc(fmtW(p))) + '</span>'
+          + '<span class="side"><div class="l">' + esc(Homey.__(mode)) + '</div><div class="v" style="color:' + colour + '">'
+          + (mode === 'idle' ? '–' : (mode === 'charging' ? '▲ ' : '▼ ') + esc(fmtW(Math.abs(p)))) + '</div></span></div>';
+        if (hasSoc) html += '<div class="bat"><i style="width:' + Math.max(0, Math.min(100, soc)) + '%;background:' + socColour(soc) + '"></i></div>';
+        curveColour = GREEN;
+        signed = true;
+      } else {
+        var daily = dailyCap(d);
+        var active = p > 10;
+        var soc2 = cap(d, 'measure_battery');
+        html += '<div class="head"><span style="color:' + (active ? SUN : 'inherit') + ';display:flex">' + PANEL_ICON + '</span><span class="name">' + esc(d.name) + '</span>'
+          + (soc2 && soc2.value != null ? '<span class="chip">' + batteryIcon(soc2.value, socColour(soc2.value)) + loc(soc2.value, 0) + ' %</span>' : '') + '</div>';
+        var parts = fmtParts(power || { type: 'number', units: 'W' }, p);
+        html += '<div class="main"><span class="big">' + esc(parts[0]) + '<small>' + esc(parts[1]) + '</small></span>';
+        if (daily) {
+          html += '<span class="side"><div class="l">' + esc(Homey.__('today')) + '</div><div class="v">' + esc(fmt(daily, daily.value)) + '</div></span>';
+          exclude.push(daily.id);
+        }
+        html += '</div>';
+        if (soc2) exclude.push('measure_battery');
+      }
+      html += curveHtml(d, idx, signed, curveColour);
+      exclude = excludeOf(d);
+      if (state.editing === d.id) html += editHtml(d, exclude);
+      else html += statsHtml(d, shownFields(d, exclude), statCols);
+      return html + '</div>';
+    }
+
+    function render() {
+      var root = document.getElementById('root');
+      if (!state.devices.length) {
+        root.innerHTML = '<div class="message">' + esc(Homey.__('chooseEnergy')) + '</div>';
+        return finish();
+      }
+      var cols = columns(state.devices.length);
+      var width = root.clientWidth || window.innerWidth;
+      var cardWidth = (width - 6 * (cols - 1)) / cols;
+      var html = state.settings.title ? '<div class="title">' + esc(state.settings.title) + '</div>' : '';
+      html += '<div class="grid size-' + (state.settings.size || 'M') + '" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))">';
+      state.devices.forEach(function (d, i) { html += cardHtml(d, i, cardWidth); });
+      root.innerHTML = html + '</div>';
+      finish();
+    }
+
+    function finish() {
+      var height = Math.ceil(document.body.scrollHeight);
+      if (!state.ready) { state.ready = true; state.lastHeight = height; Homey.ready({ height: height }); }
+      else if (Math.abs(height - state.lastHeight) > 1) { state.lastHeight = height; Homey.setHeight(height); }
+    }
+
+    function saveFields(d, list) {
+      if (list.length) state.fields[d.id] = list.slice(); else delete state.fields[d.id];
+      Homey.api('POST', '/fields', { deviceId: d.id, fields: list }).catch(function (err) { console.error(err); });
+    }
+
+    function onClick(e) {
+      var card = e.target.closest('.card[data-id]');
+      if (!card) return;
+      var d = dev(card.getAttribute('data-id'));
+      var opt = e.target.closest('[data-opt]');
+      var doBtn = e.target.closest('[data-do]');
+      if (opt) {
+        var id = opt.getAttribute('data-opt');
+        if (!state.draft.length) state.draft = autoFields(d, excludeOf(d));
+        var i = state.draft.indexOf(id);
+        if (i >= 0) state.draft.splice(i, 1); else state.draft.push(id);
+        return render();
+      }
+      if (doBtn) {
+        if (doBtn.getAttribute('data-do') === 'auto') state.draft = [];
+        saveFields(d, state.draft);
+        state.editing = null;
+        return render();
+      }
+      if (e.target.closest('.edit')) return;
+      if (state.editing === d.id) { state.editing = null; return render(); }
+      state.editing = d.id;
+      state.draft = (state.fields[d.id] || []).slice();
+      render();
+    }
+
+    function onValues(batch) {
+      var dirty = false;
+      Object.keys(batch).forEach(function (k) {
+        var i = k.indexOf('|');
+        var d = dev(k.slice(0, i));
+        if (!d) return;
+        var c = cap(d, k.slice(i + 1));
+        if (!c) return;
+        c.value = batch[k];
+        dirty = true;
+        if (c.id === 'measure_power' && state.history[d.id]) {
+          var pts = state.history[d.id], now = Date.now(), last = pts[pts.length - 1];
+          if (last && now - last[0] < 60000) last[1] = Number(c.value); else pts.push([now, Number(c.value)]);
+        }
+      });
+      if (dirty) render();
+    }
+
+    function loadHistory() {
+      if (state.settings.curve === false) return;
+      state.devices.forEach(function (d) {
+        if (d.missing || !cap(d, 'measure_power')) return;
+        Homey.api('GET', '/history?device=' + encodeURIComponent(d.id) + '&capability=measure_power')
+          .then(function (pts) { if (Array.isArray(pts)) { state.history[d.id] = pts; render(); } })
+          .catch(function () { /* no curve */ });
+      });
+    }
+
+    function load() {
+      var ids = Homey.getDeviceIds ? Homey.getDeviceIds() : [];
+      if (!ids || !ids.length) { state.devices = []; return render(); }
+      return Homey.api('GET', '/state?ids=' + encodeURIComponent(ids.join(',')))
+        .then(function (data) {
+          state.devices = (data && data.devices) || [];
+          state.fields = (data && data.fields) || {};
+          state.language = data && data.language;
+          if (state.language) document.documentElement.lang = state.language;
+          render();
+          loadHistory();
+        })
+        .catch(function (err) {
+          document.getElementById('root').innerHTML = '<div class="message">' + esc(err && err.message ? err.message : err) + '</div>';
+          finish();
+        });
+    }
+
+    function onHomeyReady(Homey) {
+      state.settings = Homey.getSettings() || {};
+      var root = document.getElementById('root');
+      root.addEventListener('click', onClick);
+      Homey.on('values', onValues);
+      Homey.on('fields', function (f) { state.fields = f || {}; if (!state.editing) render(); });
+      var lastWidth = root.clientWidth;
+      window.addEventListener('resize', function () { if (root.clientWidth !== lastWidth) { lastWidth = root.clientWidth; render(); } });
+      setInterval(loadHistory, 5 * 60 * 1000);
+      load();
+    }
+  </script>
+</body>
+</html>
