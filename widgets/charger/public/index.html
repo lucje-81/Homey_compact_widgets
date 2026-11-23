@@ -220,7 +220,7 @@
       return '<span class="phases">' + cur.map(function (c, i) {
         var v = vals[i];
         return '<span class="ph"><span class="lab">' + (cur.length > 1 ? 'L' + (i + 1) : 'I') + '</span><span class="bar"><i style="width:' + Math.min(100, v / max * 100).toFixed(1) + '%;background:' + colour + '"></i></span>'
-          + '<span class="a">' + loc(v, v >= 10 ? 1 : 2) + ' A</span></span>';
+          + '<span class="a">' + loc(v, v === 0 ? 0 : v >= 10 ? 1 : 2) + ' A</span></span>';
       }).join('') + '</span>';
     }
 
@@ -274,7 +274,7 @@
           + ' style="background:' + (on ? '#c94a3b' : GREEN) + '">' + (on ? STOP : PLAY) + esc(Homey.__(on ? 'stopCharging' : 'startCharging')) + '</button>';
       }
 
-      html += curveHtml(d, colour === GREY ? GREEN : colour);
+      html += curveHtml(d, GREEN);
       var exclude = excludeOf(d);
       if (state.editing === d.id) html += editHtml(d, exclude);
       else html += statsHtml(d, shownFields(d, exclude), width >= 330 ? 3 : 2);
