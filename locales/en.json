@@ -41,5 +41,14 @@
     "style_gauge": "Gauge",
     "style_hbar": "Horizontal bar",
     "style_vbar": "Vertical bar"
-  }
+  },
+  "on": "On",
+  "off": "Off",
+  "unavailable": "Unavailable",
+  "adjust": "Adjust",
+  "brightness": "Dim",
+  "white": "White",
+  "colour": "Colour",
+  "saturation": "Sat.",
+  "chooseDevices": "Choose your lights and switches in this widget's settings."
 }

@@ -4,6 +4,8 @@ const Homey = require('homey');
 const { HomeyAPI } = require('homey-api');
 
 const PANELS_KEY = 'panels';
+// Capabilities the "Lights and switches" widget shows and controls
+const CONTROL_CAPABILITIES = ['onoff', 'dim', 'light_hue', 'light_saturation', 'light_temperature', 'light_mode'];
 const FLUSH_MS = 300;
 
 /**
@@ -21,6 +23,7 @@ class CompactWidgetsApp extends Homey.App {
     this.pending = {};
     this.flushTimer = null;
     this.syncing = Promise.resolve();
+    this.controlKeys = new Set(); // capabilities used by "Lights and switches" widgets
 
     this.api = await HomeyAPI.createAppAPI({ homey: this.homey });
 
@@ -65,7 +68,7 @@ class CompactWidgetsApp extends Homey.App {
 
   /** Subscribe to the capabilities used in the panels, unsubscribe from the rest. */
   async syncSubscriptions() {
-    const wanted = new Set();
+    const wanted = new Set(this.controlKeys);
     for (const panel of this.getPanels()) {
       for (const gauge of panel.gauges || []) {
         if (gauge.deviceId && gauge.capability) wanted.add(CompactWidgetsApp.key(gauge));
@@ -122,6 +125,45 @@ class CompactWidgetsApp extends Homey.App {
       values[key] = key in this.values ? this.values[key] : null;
     }
     return { ...panel, values, language: this.homey.i18n.getLanguage() };
+  }
+
+  /** State of the devices of a "Lights and switches" widget; subscribes to their values. */
+  async getControlState(ids) {
+    const devices = [];
+    let added = false;
+    for (const id of ids) {
+      try {
+        const device = await this.api.devices.getDevice({ id });
+        const caps = {};
+        const options = {};
+        for (const capId of CONTROL_CAPABILITIES) {
+          const capability = device.capabilitiesObj && device.capabilitiesObj[capId];
+          if (!capability) continue;
+          const key = `${id}|${capId}`;
+          if (!this.controlKeys.has(key)) {
+            this.controlKeys.add(key);
+            added = true;
+          }
+          caps[capId] = key in this.values ? this.values[key] : capability.value;
+          if (capId === 'dim') options.dim = { min: capability.min ?? 0, max: capability.max ?? 1 };
+        }
+        devices.push({
+          id, name: device.name, class: device.class, virtualClass: device.virtualClass || null, caps, options,
+          available: device.available !== false,
+        });
+      } catch (err) {
+        devices.push({ id, name: '?', missing: true, caps: {} });
+      }
+    }
+    if (added) await this.queueSync();
+    return { devices, language: this.homey.i18n.getLanguage() };
+  }
+
+  /** Set one capability of a device (only the capabilities the widget offers). */
+  async setControlValue({ deviceId, capability, value }) {
+    if (!deviceId || !CONTROL_CAPABILITIES.includes(capability)) throw new Error('Not allowed');
+    await this.api.devices.setCapabilityValue({ deviceId, capabilityId: capability, value });
+    return true;
   }
 
   getLanguage() {

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { margin: 0; color: var(--homey-text-color, #222);
+      font-family: var(--homey-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+      -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+    .title { font-size: 14px; font-weight: 600; margin: 0 0 4px 2px; }
+    .grid { display: grid; gap: 6px; --tile-h: 52px; --icon: 30px; --name: 13px; }
+    .grid.size-S { --tile-h: 44px; --icon: 26px; --name: 12px; }
+    .grid.size-L { --tile-h: 62px; --icon: 36px; --name: 14px; }
+    .tile { position: relative; display: flex; align-items: center; gap: 8px; min-width: 0; height: var(--tile-h);
+      padding: 0 4px 0 8px; border-radius: 12px; background: rgba(127,127,127,.12); cursor: pointer; overflow: hidden;
+      transition: background-color .2s; }
+    .tile.on { background: var(--tint, rgba(245,197,66,.22)); }
+    .tile.busy { opacity: .7; }
+    .tile.na { opacity: .45; }
+    .icon { flex: none; width: var(--icon); height: var(--icon); border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; background: rgba(127,127,127,.18); color: currentColor; transition: background-color .2s, color .2s; }
+    .tile.on .icon { background: var(--accent, #f5c542); color: #222; }
+    .icon svg { width: 60%; height: 60%; }
+    .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .name { font-size: var(--name); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .state { font-size: 11px; opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .more { flex: none; width: 34px; height: calc(var(--tile-h) - 10px); max-height: 44px; border-radius: 9px; display: flex;
+      align-items: center; justify-content: center; opacity: .75; }
+    .more:active, .more.open { background: rgba(127,127,127,.22); opacity: 1; }
+    .more svg { width: 18px; height: 18px; }
+    .level { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent, #f5c542); border-radius: 0 2px 2px 0; }
+    .panel { grid-column: 1 / -1; background: rgba(127,127,127,.10); border-radius: 12px; padding: 8px 10px 10px; }
+    .ctl { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+    .ctl label { flex: none; width: 34px; font-size: 11px; opacity: .7; }
+    .ctl .val { flex: none; width: 38px; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; }
+    input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; height: 22px; border-radius: 11px;
+      margin: 0; outline: none; border: 1px solid rgba(127,127,127,.35); }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%;
+      background: #fff; border: 2px solid rgba(0,0,0,.35); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+    input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,.35); }
+    .r-dim { background: linear-gradient(90deg, #333, #fff3c4); }
+    .r-temp { background: linear-gradient(90deg, #cfe3ff, #fff6e8 50%, #ffb35c); }
+    .r-hue { background: linear-gradient(90deg, #f00, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00); }
+    .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .preset { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(127,127,127,.4); cursor: pointer; }
+    .preset:active { transform: scale(.92); }
+    .message { font-size: 13px; opacity: .75; padding: 8px 2px; line-height: 1.4; }
+    /* Narrow tiles: icon and adjust button on top, name and state below over the full width */
+    .grid.narrow .tile { flex-wrap: wrap; height: auto; min-height: var(--tile-h); padding: 7px 6px 8px 8px;
+      gap: 4px 6px; align-content: flex-start; }
+    .grid.narrow .icon { width: 26px; height: 26px; }
+    .grid.narrow .more { margin-left: auto; width: 30px; height: 26px; }
+    .grid.narrow .more svg { width: 15px; height: 15px; }
+    .grid.narrow .txt { flex-basis: 100%; order: 3; }
+    .grid.narrow .name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      line-height: 1.2; overflow-wrap: break-word; hyphens: auto; }
+  </style>
+</head>
+<body class="homey-widget-small">
+  <div id="root"></div>
+  <script>
+    var MIN_WIDTH = { S: 88, M: 112, L: 150 };
+    var NARROW = 150; // below this tile width: name on two lines, no state line, smaller adjust button
+    var ICONS = {
+      light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>',
+      socket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7V3M15 7V3M6 7h12v4a6 6 0 0 1-12 0V7zM12 17v4"/></svg>',
+      other: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8M7.5 6.5a7 7 0 1 0 9 0"/></svg>',
+      sliders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
+    };
+    // Presets: white (temperature 0 = cold ... 1 = warm) and colours (hue, saturation)
+    var WHITES = [{ t: 1, c: '#ffb35c' }, { t: 0.5, c: '#fff6e8' }, { t: 0, c: '#cfe3ff' }];
+    var COLOURS = [0, 0.08, 0.15, 0.33, 0.5, 0.62, 0.75, 0.9];
+
+    var state = { devices: [], settings: {}, open: null, ready: false, lastHeight: 0, language: undefined, hold: {} };
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
+    }
+    function dev(id) { return state.devices.find(function (d) { return d.id === id; }); }
+    function has(d, cap) { return d.caps && Object.prototype.hasOwnProperty.call(d.caps, cap); }
+    function isLight(d) { return d.class === 'light' || d.virtualClass === 'light' || has(d, 'dim') || has(d, 'light_hue') || has(d, 'light_temperature'); }
+    function adjustable(d) { return has(d, 'dim') || has(d, 'light_hue') || has(d, 'light_temperature'); }
+    function dimFrac(d) {
+      var o = (d.options && d.options.dim) || { min: 0, max: 1 };
+      var v = Number(d.caps.dim);
+      return isNaN(v) ? null : Math.max(0, Math.min(1, (v - o.min) / ((o.max - o.min) || 1)));
+    }
+    function pct(f) { return Math.round(f * 100) + ' %'; }
+
+    // Colour of the light: colour mode -> hue/sat, temperature mode -> warm/cold white
+    function lightColour(d) {
+      var c = d.caps;
+      var mode = c.light_mode;
+      if (has(d, 'light_hue') && (mode === 'color' || (!has(d, 'light_temperature') && mode == null))) {
+        var h = Math.round((Number(c.light_hue) || 0) * 360);
+        var s = Math.round((c.light_saturation == null ? 1 : Number(c.light_saturation)) * 100);
+        return 'hsl(' + h + ',' + Math.max(s, 25) + '%,58%)';
+      }
+      if (has(d, 'light_temperature') && c.light_temperature != null) {
+        var t = Number(c.light_temperature); // 0 cold .. 1 warm
+        var a = [207, 227, 255];
+        var b = [255, 179, 92];
+        return 'rgb(' + a.map(function (v, i) { return Math.round(v + (b[i] - v) * t); }).join(',') + ')';
+      }
+      return isLight(d) ? '#f5c542' : '#5cbf4a';
+    }
+    function tint(colour) {
+      return colour.indexOf('hsl') === 0 ? colour.replace('hsl', 'hsla').replace(')', ',.22)')
+        : colour.indexOf('rgb') === 0 ? colour.replace('rgb', 'rgba').replace(')', ',.22)')
+          : colour + '38';
+    }
+
+    function columns(n) {
+      var s = state.settings;
+      if (s.columns && s.columns !== 'auto') return Math.min(Number(s.columns), Math.max(1, n));
+      var width = document.getElementById('root').clientWidth || window.innerWidth;
+      return Math.max(1, Math.min(Math.floor((width + 6) / ((MIN_WIDTH[s.size] || MIN_WIDTH.M) + 6)), n, 4));
+    }
+
+    function tileHtml(d) {
+      if (d.missing) return '<div class="tile na"><div class="txt"><span class="name">?</span></div></div>';
+      var on = d.caps.onoff === true;
+      var colour = lightColour(d);
+      var f = has(d, 'dim') ? dimFrac(d) : null;
+      var st = on ? (f != null ? Homey.__('on') + ' · ' + pct(f) : Homey.__('on')) : Homey.__('off');
+      if (!d.available) st = Homey.__('unavailable');
+      var icon = ICONS[isLight(d) ? 'light' : (d.class === 'socket' ? 'socket' : 'other')];
+      return '<div class="tile' + (on ? ' on' : '') + (d.available ? '' : ' na') + '" data-id="' + esc(d.id) + '" data-a="toggle"'
+        + ' style="--accent:' + colour + ';--tint:' + tint(colour) + '">'
+        + '<span class="icon" data-a="toggle">' + icon + '</span>'
+        + '<span class="txt" data-a="toggle"><span class="name" data-a="toggle">' + esc(d.name) + '</span><span class="state" data-a="toggle">' + esc(st) + '</span></span>'
+        + (adjustable(d) ? '<span class="more' + (state.open === d.id ? ' open' : '') + '" data-a="more" aria-label="' + esc(Homey.__('adjust')) + '">' + ICONS.sliders + '</span>' : '')
+        + (on && f != null ? '<span class="level" style="width:' + (f * 100).toFixed(1) + '%"></span>' : '')
+        + '</div>';
+    }
+
+    function slider(d, cap, cls, label, value, display) {
+      return '<div class="ctl"><label>' + esc(label) + '</label><input type="range" class="' + cls + '" data-id="' + esc(d.id) + '" data-cap="' + cap
+        + '" min="0" max="1000" step="1" value="' + Math.round(value * 1000) + '"><span class="val">' + esc(display) + '</span></div>';
+    }
+
+    function panelHtml(d) {
+      var c = d.caps;
+      var html = '<div class="panel" data-panel="' + esc(d.id) + '">';
+      if (has(d, 'dim')) html += slider(d, 'dim', 'r-dim', Homey.__('brightness'), dimFrac(d) || 0, pct(dimFrac(d) || 0));
+      if (has(d, 'light_temperature')) html += slider(d, 'light_temperature', 'r-temp', Homey.__('white'), Number(c.light_temperature) || 0, '');
+      if (has(d, 'light_hue')) {
+        html += slider(d, 'light_hue', 'r-hue', Homey.__('colour'), Number(c.light_hue) || 0, '');
+        if (has(d, 'light_saturation')) {
+          var h = Math.round((Number(c.light_hue) || 0) * 360);
+          html += '<div class="ctl"><label>' + esc(Homey.__('saturation')) + '</label><input type="range" data-id="' + esc(d.id)
+            + '" data-cap="light_saturation" min="0" max="1000" step="1" value="' + Math.round((Number(c.light_saturation) || 0) * 1000)
+            + '" style="background:linear-gradient(90deg,#fff,hsl(' + h + ',100%,50%))"><span class="val"></span></div>';
+        }
+      }
+      var presets = '';
+      if (has(d, 'light_temperature')) WHITES.forEach(function (w) { presets += '<span class="preset" data-id="' + esc(d.id) + '" data-t="' + w.t + '" style="background:' + w.c + '"></span>'; });
+      if (has(d, 'light_hue')) COLOURS.forEach(function (hue) { presets += '<span class="preset" data-id="' + esc(d.id) + '" data-h="' + hue + '" style="background:hsl(' + Math.round(hue * 360) + ',100%,50%)"></span>'; });
+      if (presets) html += '<div class="presets">' + presets + '</div>';
+      return html + '</div>';
+    }
+
+    function render() {
+      var root = document.getElementById('root');
+      if (!state.devices.length) {
+        root.innerHTML = '<div class="message">' + esc(Homey.__('chooseDevices')) + '</div>';
+        return finish();
+      }
+      var html = state.settings.title ? '<div class="title">' + esc(state.settings.title) + '</div>' : '';
+      var cols = columns(state.devices.length);
+      var width = document.getElementById('root').clientWidth || window.innerWidth;
+      var narrow = (width - 6 * (cols - 1)) / cols < NARROW;
+      html += '<div class="grid size-' + (state.settings.size || 'M') + (narrow ? ' narrow' : '') + '" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))">';
+      state.devices.forEach(function (d, i) {
+        html += tileHtml(d);
+        // the adjust panel opens below the row of the tile
+        var endOfRow = (i % cols === cols - 1) || i === state.devices.length - 1;
+        if (endOfRow && state.open) {
+          var rowStart = i - (i % cols);
+          var openIdx = state.devices.findIndex(function (x) { return x.id === state.open; });
+          if (openIdx >= rowStart && openIdx <= i) html += panelHtml(state.devices[openIdx]);
+        }
+      });
+      root.innerHTML = html + '</div>';
+      finish();
+    }
+
+    function finish() {
+      var height = Math.ceil(document.body.scrollHeight);
+      if (!state.ready) { state.ready = true; state.lastHeight = height; Homey.ready({ height: height }); }
+      else if (Math.abs(height - state.lastHeight) > 1) { state.lastHeight = height; Homey.setHeight(height); }
+    }
+
+    // Send a value; ignore echoes of this capability for a moment so sliders do not jump back
+    function send(id, cap, value) {
+      state.hold[id + '|' + cap] = Date.now() + 1500;
+      return Homey.api('POST', '/set', { deviceId: id, capability: cap, value: value }).catch(function (err) {
+        state.hold[id + '|' + cap] = 0;
+        load();
+        console.error(err);
+      });
+    }
+
+    function setLocal(d, cap, value) { d.caps[cap] = value; }
+
+    // Long press on a tile opens the adjust panel (same as the sliders button)
+    var press = { timer: null, fired: false, x: 0, y: 0 };
+    function onPressStart(e) {
+      var tile = e.target.closest('.tile');
+      press.fired = false;
+      if (!tile) return;
+      var d = dev(tile.getAttribute('data-id'));
+      if (!d || !adjustable(d) || !d.available) return;
+      press.x = e.clientX; press.y = e.clientY;
+      clearTimeout(press.timer);
+      press.timer = setTimeout(function () {
+        press.fired = true;
+        state.open = d.id;
+        render();
+      }, 550);
+    }
+    function onPressMove(e) {
+      if (press.timer && (Math.abs(e.clientX - press.x) > 8 || Math.abs(e.clientY - press.y) > 8)) { clearTimeout(press.timer); press.timer = null; }
+    }
+    function onPressEnd() { clearTimeout(press.timer); press.timer = null; }
+
+    function onClick(e) {
+      if (press.fired) { press.fired = false; return; }
+      var el = e.target.closest('[data-a], .preset');
+      if (!el) return;
+      if (el.classList.contains('preset')) {
+        var p = dev(el.getAttribute('data-id'));
+        if (el.hasAttribute('data-t')) {
+          var tv = Number(el.getAttribute('data-t'));
+          if (has(p, 'light_mode')) { setLocal(p, 'light_mode', 'temperature'); send(p.id, 'light_mode', 'temperature'); }
+          setLocal(p, 'light_temperature', tv); send(p.id, 'light_temperature', tv);
+        } else {
+          var hv = Number(el.getAttribute('data-h'));
+          if (has(p, 'light_mode')) { setLocal(p, 'light_mode', 'color'); send(p.id, 'light_mode', 'color'); }
+          setLocal(p, 'light_hue', hv); send(p.id, 'light_hue', hv);
+          if (has(p, 'light_saturation')) { setLocal(p, 'light_saturation', 1); send(p.id, 'light_saturation', 1); }
+        }
+        if (p.caps.onoff !== true) { setLocal(p, 'onoff', true); send(p.id, 'onoff', true); }
+        return render();
+      }
+      var tile = el.closest('.tile');
+      if (!tile) return;
+      var d = dev(tile.getAttribute('data-id'));
+      if (!d || !d.available) return;
+      if (el.getAttribute('data-a') === 'more') {
+        state.open = state.open === d.id ? null : d.id;
+        return render();
+      }
+      var next = d.caps.onoff !== true;
+      setLocal(d, 'onoff', next);
+      render();
+      send(d.id, 'onoff', next);
+    }
+
+    // Sliders: update while dragging (throttled), always send the final value
+    var lastSent = {};
+    var lastValue = {};
+    function onSlide(e, final) {
+      var input = e.target;
+      if (input.type !== 'range') return;
+      var d = dev(input.getAttribute('data-id'));
+      var cap = input.getAttribute('data-cap');
+      var f = Number(input.value) / 1000;
+      var value = f;
+      if (cap === 'dim') {
+        var o = (d.options && d.options.dim) || { min: 0, max: 1 };
+        value = o.min + f * (o.max - o.min);
+        input.nextSibling.textContent = pct(f);
+      }
+      var key = d.id + '|' + cap;
+      var now = Date.now();
+      if (!final && lastSent[key] && now - lastSent[key] < 350) { state.hold[key] = now + 1500; return; }
+      if (lastValue[key] === value) { if (final) render(); return; }
+      lastSent[key] = now;
+      lastValue[key] = value;
+      if (cap === 'light_hue' || cap === 'light_saturation') {
+        if (has(d, 'light_mode') && d.caps.light_mode !== 'color') { setLocal(d, 'light_mode', 'color'); send(d.id, 'light_mode', 'color'); }
+      }
+      if (cap === 'light_temperature' && has(d, 'light_mode') && d.caps.light_mode !== 'temperature') {
+        setLocal(d, 'light_mode', 'temperature'); send(d.id, 'light_mode', 'temperature');
+      }
+      setLocal(d, cap, value);
+      send(d.id, cap, value);
+      if (cap === 'dim' && value > 0 && d.caps.onoff !== true) { setLocal(d, 'onoff', true); send(d.id, 'onoff', true); }
+      if (final) render();
+      else updateTile(d);
+    }
+
+    // Redraw one tile without touching an open slider
+    function updateTile(d) {
+      var tile = document.querySelector('.tile[data-id="' + CSS.escape(d.id) + '"]');
+      if (tile) tile.outerHTML = tileHtml(d);
+    }
+
+    function onValues(batch) {
+      var changed = {};
+      Object.keys(batch).forEach(function (k) {
+        var i = k.indexOf('|');
+        var id = k.slice(0, i);
+        var cap = k.slice(i + 1);
+        var d = dev(id);
+        if (!d || !has(d, cap)) return;
+        if (state.hold[k] && state.hold[k] > Date.now()) return;
+        d.caps[cap] = batch[k];
+        changed[id] = d;
+      });
+      var dragging = document.activeElement && document.activeElement.type === 'range';
+      Object.keys(changed).forEach(function (id) {
+        if (dragging || state.open === id) updateTile(changed[id]);
+      });
+      if (!dragging && Object.keys(changed).some(function (id) { return state.open !== id; })) render();
+    }
+
+    function load() {
+      var ids = Homey.getDeviceIds ? Homey.getDeviceIds() : [];
+      if (!ids || !ids.length) { state.devices = []; return render(); }
+      return Homey.api('GET', '/state?ids=' + encodeURIComponent(ids.join(',')))
+        .then(function (data) {
+          state.devices = (data && data.devices) || [];
+          state.language = data && data.language;
+          if (state.language) document.documentElement.lang = state.language;
+          render();
+        })
+        .catch(function (err) {
+          document.getElementById('root').innerHTML = '<div class="message">' + esc(err && err.message ? err.message : err) + '</div>';
+          finish();
+        });
+    }
+
+    function onHomeyReady(Homey) {
+      state.settings = Homey.getSettings() || {};
+      var root = document.getElementById('root');
+      root.addEventListener('click', onClick);
+      root.addEventListener('pointerdown', onPressStart);
+      root.addEventListener('pointermove', onPressMove);
+      root.addEventListener('pointerup', onPressEnd);
+      root.addEventListener('pointercancel', onPressEnd);
+      root.addEventListener('contextmenu', function (e) { if (e.target.closest('.tile')) e.preventDefault(); });
+      root.addEventListener('input', function (e) { onSlide(e, false); });
+      root.addEventListener('change', function (e) { onSlide(e, true); });
+      Homey.on('values', onValues);
+      var lastWidth = root.clientWidth;
+      window.addEventListener('resize', function () {
+        if (root.clientWidth !== lastWidth) { lastWidth = root.clientWidth; render(); }
+      });
+      load();
+    }
+  </script>
+</body>
+</html>

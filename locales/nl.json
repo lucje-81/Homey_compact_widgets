@@ -41,5 +41,14 @@
     "style_gauge": "Wijzerplaat",
     "style_hbar": "Balk horizontaal",
     "style_vbar": "Balk verticaal"
-  }
+  },
+  "on": "Aan",
+  "off": "Uit",
+  "unavailable": "Niet bereikbaar",
+  "adjust": "Aanpassen",
+  "brightness": "Licht",
+  "white": "Wit",
+  "colour": "Kleur",
+  "saturation": "Verz.",
+  "chooseDevices": "Kies je lampen en schakelaars in de instellingen van deze widget."
 }

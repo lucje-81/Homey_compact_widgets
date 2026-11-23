@@ -19,6 +19,16 @@ this app puts **several gauges in one widget**, so a full energy dashboard fits 
 
 On a tablet with 4 dashboard columns, six gauges take about the height of one standard gauge widget.
 
+## Lights and switches widget (v0.4)
+
+- Choose your devices directly in the widget settings (Homey's own device picker; every device that can switch on/off)
+- Compact tiles: icon, name and state (`On · 60 %`); icon and background follow the actual light colour or warm/cold white; a thin bar shows the brightness
+- **Tap** a tile to switch on/off
+- **Sliders button** (or **long press** on the tile) opens the controls below the tile, showing only what the light supports:
+  brightness, warm ↔ cold white, colour and saturation, plus quick presets (warm/neutral/cold white and 8 colours)
+- Tiles per row: automatic or 1–4; size small/medium/large. Narrow tiles put the name over the full width (two lines), tiles stay at least 44 px high for touch
+- Sliders send while dragging (max. ~3 times per second) and always the final value; echoes from the device are ignored briefly so sliders do not jump back
+
 ## How to use
 
 1. Install the app (see below).
@@ -30,7 +40,7 @@ You can use the same panel in several widgets (e.g. 2 per row on a tablet, 3 per
 
 ## Permission
 
-The app uses the `homey:manager:api` permission to read the values of devices from other apps. It only reads values; nothing is changed on your devices in this version.
+The app uses the `homey:manager:api` permission to read the values of devices from other apps and, in the Lights and switches widget, to control them (only on/off, dim, light colour, light temperature and light mode).
 
 ## Installation
 
@@ -54,7 +64,7 @@ To update later: `git pull`, then `homey app install`.
 
 ## Planned
 
-- Compact tile/list widget mixing values and controls (on/off, dim, thermostat)
+- Thermostats, window coverings and scenes/flows in the same compact style
 
 ## License
 
