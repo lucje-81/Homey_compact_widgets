@@ -1,4 +1,8 @@
 {
+  "0.6.0": {
+    "en": "Garage doors and gates in the Climate widget, with icons per type (sectional, up-and-over, roller, swing and sliding gate) that show the open state",
+    "nl": "Garagepoorten en poorten in de Klimaat-widget, met iconen per type (sectionaal-, kantel-, oprol-, draai- en schuifpoort) die de stand tonen"
+  },
   "0.5.0": {
     "en": "New widgets: Climate and covers (thermostats, window coverings) and Flows (buttons to start flows)",
     "nl": "Nieuwe widgets: Klimaat en rolluiken (thermostaten, rolluiken) en Flows (knoppen om flows te starten)"

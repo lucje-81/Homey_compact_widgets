@@ -9,8 +9,14 @@ const CONTROL_CAPABILITIES = [
   'onoff', 'dim', 'light_hue', 'light_saturation', 'light_temperature', 'light_mode',
   'target_temperature', 'measure_temperature', 'thermostat_mode',
   'windowcoverings_set', 'windowcoverings_state',
+  'garagedoor_closed', 'alarm_contact',
 ];
-const SETTABLE = CONTROL_CAPABILITIES.filter((c) => c !== 'measure_temperature');
+const READ_ONLY = ['measure_temperature', 'alarm_contact'];
+// Capabilities without a value (a press, e.g. an impulse relay for a gate): only reported as present
+const ACTION_CAPABILITIES = ['button'];
+const SETTABLE = [...CONTROL_CAPABILITIES.filter((c) => !READ_ONLY.includes(c)), ...ACTION_CAPABILITIES];
+const ICONS_KEY = 'icons';
+const ICON_CHOICES = ['auto', 'thermostat', 'shutter', 'awning', 'sectional', 'tilt', 'roller', 'swing', 'sliding', 'power'];
 const FLOW_SLOTS = ['flow1', 'flow2', 'flow3', 'flow4', 'flow5', 'flow6', 'flow7', 'flow8'];
 const FLUSH_MS = 300;
 
@@ -34,6 +40,7 @@ class CompactWidgetsApp extends Homey.App {
     this.api = await HomeyAPI.createAppAPI({ homey: this.homey });
 
     this.homey.settings.on('set', (key) => {
+      if (key === ICONS_KEY) this.homey.api.realtime('icons', this.homey.settings.get(ICONS_KEY) || {});
       if (key !== PANELS_KEY) return;
       // subscribe to new values first, then tell open widgets to reload their panel
       this.queueSync().then(() => this.homey.api.realtime('panels', { updated: Date.now() }));
@@ -166,6 +173,9 @@ class CompactWidgetsApp extends Homey.App {
             options.thermostat_mode = capability.values.map((v) => ({ id: v.id, title: v.title || v.id }));
           }
         }
+        for (const capId of ACTION_CAPABILITIES) {
+          if (device.capabilitiesObj && device.capabilitiesObj[capId]) caps[capId] = null;
+        }
         devices.push({
           id, name: device.name, class: device.class, virtualClass: device.virtualClass || null, caps, options,
           available: device.available !== false,
@@ -175,7 +185,17 @@ class CompactWidgetsApp extends Homey.App {
       }
     }
     if (added) await this.queueSync();
-    return { devices, language: this.homey.i18n.getLanguage() };
+    return { devices, language: this.homey.i18n.getLanguage(), icons: this.homey.settings.get(ICONS_KEY) || {} };
+  }
+
+  /** Icon chosen for a device in a widget (stored app-wide, so every dashboard shows the same icon). */
+  async setIcon({ deviceId, icon }) {
+    if (!deviceId || !ICON_CHOICES.includes(icon)) throw new Error('Not allowed');
+    const icons = { ...(this.homey.settings.get(ICONS_KEY) || {}) };
+    if (icon === 'auto') delete icons[deviceId];
+    else icons[deviceId] = icon;
+    this.homey.settings.set(ICONS_KEY, icons);
+    return icons;
   }
 
   /** Set one capability of a device (only the capabilities the widget offers). */

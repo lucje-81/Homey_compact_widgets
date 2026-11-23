@@ -1,7 +1,7 @@
 {
   "name": {
-    "en": "Climate and covers",
-    "nl": "Klimaat en rolluiken"
+    "en": "Climate, covers and gates",
+    "nl": "Klimaat, rolluiken en poorten"
   },
   "devices": {
     "type": "global",
@@ -100,6 +100,10 @@
     "setValue": {
       "method": "POST",
       "path": "/set"
+    },
+    "setIcon": {
+      "method": "POST",
+      "path": "/icon"
     }
   }
 }

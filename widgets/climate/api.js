@@ -9,4 +9,8 @@ module.exports = {
   async setValue({ homey, body }) {
     return homey.app.setControlValue(body || {});
   },
+
+  async setIcon({ homey, body }) {
+    return homey.app.setIcon(body || {});
+  },
 };

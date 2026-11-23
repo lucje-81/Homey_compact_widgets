@@ -29,11 +29,14 @@ On a tablet with 4 dashboard columns, six gauges take about the height of one st
 - Tiles per row: automatic or 1–4; size small/medium/large. Narrow tiles put the name over the full width (two lines), tiles stay at least 44 px high for touch
 - Sliders send while dragging (max. ~3 times per second) and always the final value; echoes from the device are ignored briefly so sliders do not jump back
 
-## Climate and covers widget (v0.5)
+## Climate, covers and gates widget (v0.5–0.6)
 
 - Thermostats: current temperature large, target and mode below; orange when heating, blue when cooling (mode `cool`)
 - Tap a thermostat to open **− / +** buttons (in the device's own step, min and max) and the available modes; the new target is sent 0.7 s after the last tap
 - Window coverings: state (`Open 60 %`, `Closed`, going up/down) with a thin position bar; tap for **▲ ■ ▼** and a position slider (only what the device supports)
+- Garage doors and gates (v0.6): `garagedoor_closed` (Open / Close buttons), impulse relays with a `button` capability (Operate button), relays with on/off, and a contact sensor (`alarm_contact`) for the state. Gates always open a panel first, so a single accidental tap never moves a gate
+- Icons drawn to show the actual state (closed, half open, open): sectional door, up-and-over (tilt) door, roller door, swing gate with two leaves, sliding gate, roller shutter, awning, thermostat, switch
+- The icon is guessed from the device class and name (e.g. "kantelpoort", "schuifpoort", "tuinpoort"); change it in the panel under **Icon** (long press on a tile also opens the panel). The choice is stored in the app, so every dashboard shows the same icon
 - Plain on/off devices can be added too and are switched with a tap
 
 ## Flows widget (v0.5)
@@ -53,7 +56,7 @@ You can use the same panel in several widgets (e.g. 2 per row on a tablet, 3 per
 
 ## Permission
 
-The app uses the `homey:manager:api` permission to read the values of devices from other apps and, in the Lights and switches and Climate widgets, to control them (on/off, dim, light colour/temperature/mode, target temperature, thermostat mode and window coverings), and to start the flows you put on the Flows widget.
+The app uses the `homey:manager:api` permission to read the values of devices from other apps and, in the Lights and switches and Climate widgets, to control them (on/off, dim, light colour/temperature/mode, target temperature, thermostat mode, window coverings, garage doors and button presses), and to start the flows you put on the Flows widget.
 
 ## Installation
 
