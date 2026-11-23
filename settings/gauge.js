@@ -132,5 +132,124 @@
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(g.title) + ': ' + esc(format(value, g, locale)) + '">' + out + '</svg>';
   }
 
-  root.CompactGauge = { svg: svg, format: format, schemes: Object.keys(SCHEMES), colorAt: colorAt, esc: esc };
+  // ---------------------------------------------------------------------------
+  // Bars (same scale, colours, from-0 and needle as the gauge)
+  // ---------------------------------------------------------------------------
+
+  function frac(g, value) {
+    var min = Number(g.min);
+    var max = Number(g.max);
+    if (!(max > min)) max = min + 1;
+    var has = !(value === null || value === undefined || isNaN(Number(value)));
+    var f = has ? Math.max(0, Math.min(1, (Number(value) - min) / (max - min))) : 0;
+    var base = g.fromZero ? Math.max(0, Math.min(1, (0 - min) / (max - min))) : 0;
+    return { min: min, max: max, has: has, f: f, base: base };
+  }
+
+  /** Horizontal bar: full widget width, title left and value right above the bar (HTML). */
+  function hbar(g, value, locale) {
+    var x = frac(g, value);
+    var segs = '';
+    for (var i = 0; i < 24; i++) segs += '<span class="seg" style="background:' + colorAt(g.scheme, (i + 0.5) / 24) + '"></span>';
+    var extra = '';
+    if (x.has) {
+      var lo = Math.min(x.base, x.f);
+      var hi = Math.max(x.base, x.f);
+      if (hi - lo > 0.003) {
+        extra += '<span class="cg-fill" style="left:' + (lo * 100).toFixed(2) + '%;width:' + ((hi - lo) * 100).toFixed(2)
+          + '%;background:' + colorAt(g.scheme, x.f) + '"></span>';
+      }
+      extra += '<span class="cg-needle" style="left:' + (x.f * 100).toFixed(2) + '%"></span>';
+    }
+    if (g.fromZero) extra += '<span class="cg-zero" style="left:' + (x.base * 100).toFixed(2) + '%"></span>';
+    return '<div class="cg-hbar-head"><span class="cg-title">' + esc(g.title) + '</span><span class="cg-val">'
+      + esc(format(value, g, locale)) + '</span></div>'
+      + '<div class="cg-track" role="img" aria-label="' + esc(g.title) + ': ' + esc(format(value, g, locale)) + '">' + segs + extra + '</div>'
+      + '<div class="cg-scale"><span>' + esc(shortNumber(x.min)) + '</span><span>' + esc(shortNumber(x.max)) + '</span></div>';
+  }
+
+  /** Vertical bar: value on top, bar below, min/max at the left (SVG). */
+  function vbar(g, value, locale) {
+    var x = frac(g, value);
+    var W = 60;
+    var H = 120;
+    var bx = 30;
+    var bw = 11;
+    var top = 24;
+    var bottom = 112;
+    var len = bottom - top;
+    var segs = 20;
+    var out = '';
+    var yAt = function (f) { return bottom - f * len; };
+    for (var i = 0; i < segs; i++) {
+      var y1 = yAt((i + 1) / segs) + 0.6;
+      var y0 = yAt(i / segs) - 0.6;
+      out += '<rect x="' + bx + '" y="' + y1.toFixed(1) + '" width="' + bw + '" height="' + (y0 - y1).toFixed(1)
+        + '" rx="1" fill="' + colorAt(g.scheme, (i + 0.5) / segs) + '" opacity="0.28"/>';
+    }
+    if (x.has) {
+      var lo = Math.min(x.base, x.f);
+      var hi = Math.max(x.base, x.f);
+      if (hi - lo > 0.003) {
+        out += '<rect x="' + bx + '" y="' + yAt(hi).toFixed(1) + '" width="' + bw + '" height="' + (yAt(lo) - yAt(hi)).toFixed(1)
+          + '" rx="2" fill="' + colorAt(g.scheme, x.f) + '"/>';
+      }
+      out += '<line x1="' + (bx - 3) + '" x2="' + (bx + bw + 3) + '" y1="' + yAt(x.f).toFixed(1) + '" y2="' + yAt(x.f).toFixed(1)
+        + '" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>';
+    }
+    if (g.fromZero) {
+      out += '<line x1="' + (bx - 1) + '" x2="' + (bx + bw + 1) + '" y1="' + yAt(x.base).toFixed(1) + '" y2="' + yAt(x.base).toFixed(1)
+        + '" stroke="currentColor" stroke-width="1" opacity="0.45"/>';
+    }
+    out += '<text x="' + (W / 2) + '" y="15" text-anchor="middle" fill="currentColor" style="font-size:14px;font-weight:600">'
+      + esc(format(value, g, locale)) + '</text>';
+    out += '<text x="' + (bx - 5) + '" y="' + (top + 4) + '" text-anchor="end" fill="currentColor" opacity="0.55" style="font-size:9px">'
+      + esc(shortNumber(x.max)) + '</text>';
+    out += '<text x="' + (bx - 5) + '" y="' + bottom + '" text-anchor="end" fill="currentColor" opacity="0.55" style="font-size:9px">'
+      + esc(shortNumber(x.min)) + '</text>';
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + esc(g.title) + ': '
+      + esc(format(value, g, locale)) + '">' + out + '</svg>';
+  }
+
+  /** One panel item (gauge, horizontal or vertical bar) including its title. */
+  function item(g, value, locale, id) {
+    var style = g.style === 'hbar' || g.style === 'vbar' ? g.style : 'gauge';
+    var inner;
+    if (style === 'hbar') inner = hbar(g, value, locale);
+    else inner = (style === 'vbar' ? vbar(g, value, locale) : svg(g, value, locale))
+      + '<span class="cg-title">' + esc(g.title) + '</span>';
+    return '<div class="cg-item cg-' + style + '"' + (id ? ' id="' + esc(id) + '"' : '') + '>' + inner + '</div>';
+  }
+
+  var CSS = [
+    '.cg-grid{display:grid;gap:2px 6px;--cg-vbar-h:96px;--cg-track:8px}',
+    '.cg-grid.size-S{--cg-vbar-h:76px;--cg-track:6px}',
+    '.cg-grid.size-L{--cg-vbar-h:124px;--cg-track:10px}',
+    '.cg-item{display:flex;flex-direction:column;align-items:center;min-width:0}',
+    '.cg-item svg{width:100%;height:auto;display:block}',
+    '.cg-item .cg-title{font-size:11px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center}',
+    '.cg-grid.size-S .cg-title{font-size:10px}.cg-grid.size-L .cg-title{font-size:12px}',
+    '.cg-vbar svg{height:var(--cg-vbar-h)}',
+    '.cg-hbar{grid-column:1/-1;align-items:stretch;padding:3px 2px 1px}',
+    '.cg-hbar-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-width:0}',
+    '.cg-hbar .cg-title{text-align:left}',
+    '.cg-val{font-size:14px;font-weight:600;white-space:nowrap}',
+    '.cg-track{position:relative;height:var(--cg-track);display:flex;gap:1px;margin-top:3px}',
+    '.cg-track .seg{flex:1;opacity:.28;border-radius:1px}',
+    '.cg-fill{position:absolute;top:0;bottom:0;border-radius:2px}',
+    '.cg-needle{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:currentColor;border-radius:1px}',
+    '.cg-zero{position:absolute;top:-1px;bottom:-1px;width:1px;background:currentColor;opacity:.45}',
+    '.cg-scale{display:flex;justify-content:space-between;font-size:9px;opacity:.55;margin-top:1px}',
+  ].join('\n');
+
+  if (typeof document !== 'undefined' && !document.getElementById('cg-styles')) {
+    var st = document.createElement('style');
+    st.id = 'cg-styles';
+    st.textContent = CSS;
+    (document.head || document.documentElement).appendChild(st);
+  }
+
+  root.CompactGauge = {
+    svg: svg, hbar: hbar, vbar: vbar, item: item, format: format, schemes: Object.keys(SCHEMES), colorAt: colorAt, esc: esc,
+  };
 }(typeof window !== 'undefined' ? window : this));

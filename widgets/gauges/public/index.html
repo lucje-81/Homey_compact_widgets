@@ -5,13 +5,6 @@
   <style>
     body { margin: 0; color: var(--homey-text-color, #222); font-family: var(--homey-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif); }
     .panel-title { font-size: var(--homey-font-size-small, 14px); font-weight: 600; margin: 0 0 2px 2px; }
-    .grid { display: grid; gap: 2px 6px; }
-    .gauge { display: flex; flex-direction: column; align-items: center; min-width: 0; }
-    .gauge svg { width: 100%; height: auto; display: block; }
-    .gauge-title { font-size: 11px; opacity: 0.7; margin-top: 0; max-width: 100%;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
-    .size-S .gauge-title { font-size: 10px; }
-    .size-L .gauge-title { font-size: 12px; }
     .message { font-size: 13px; opacity: 0.75; padding: 8px 2px; line-height: 1.4; }
   </style>
 </head>
@@ -24,6 +17,11 @@
     var state = { panel: null, values: {}, settings: {}, ready: false, lastHeight: 0, language: undefined };
 
     function key(g) { return g.deviceId + '|' + g.capability; }
+
+    // Items that share the grid (horizontal bars take a full row)
+    function cellCount(gauges) {
+      return Math.max(1, gauges.filter(function (g) { return g.style !== 'hbar'; }).length);
+    }
 
     function columns(count) {
       var s = state.settings;
@@ -46,10 +44,9 @@
       var root = document.getElementById('root');
       var html = '';
       if (state.settings.show_title !== false) html += '<div class="panel-title">' + CompactGauge.esc(p.name) + '</div>';
-      html += '<div class="grid size-' + (state.settings.size || 'M') + '" style="grid-template-columns:repeat(' + columns(gauges.length) + ',minmax(0,1fr))">';
+      html += '<div class="cg-grid size-' + (state.settings.size || 'M') + '" style="grid-template-columns:repeat(' + columns(cellCount(gauges)) + ',minmax(0,1fr))">';
       gauges.forEach(function (g, i) {
-        html += '<div class="gauge" id="g' + i + '">' + CompactGauge.svg(g, state.values[key(g)], state.language)
-          + '<span class="gauge-title">' + CompactGauge.esc(g.title) + '</span></div>';
+        html += CompactGauge.item(g, state.values[key(g)], state.language, 'g' + i);
       });
       html += '</div>';
       root.innerHTML = html;
@@ -64,7 +61,7 @@
         if (!(k in batch)) return;
         state.values[k] = batch[k];
         var el = document.getElementById('g' + i);
-        if (el) el.firstChild.outerHTML = CompactGauge.svg(g, batch[k], state.language);
+        if (el) el.outerHTML = CompactGauge.item(g, batch[k], state.language, 'g' + i);
       });
     }
 

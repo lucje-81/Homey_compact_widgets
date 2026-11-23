@@ -6,6 +6,7 @@ this app puts **several gauges in one widget**, so a full energy dashboard fits 
 ## Gauges widget (v0.1)
 
 - Several gauges in one widget, for **any device** in your Homey (Growatt, P1 meter, EV charger, thermostats, …)
+- Per item a **display**: gauge, **horizontal bar** (full width, title and value above the bar) or **vertical bar** (in the grid, like a gauge); mix them in one panel
 - **Gauges per row**: automatic (as many as fit), or fixed 1, 2, 3, 4 or 6
 - **Size**: small, medium or large
 - Per gauge: device and value, title, minimum and maximum, unit, decimals and colour scale

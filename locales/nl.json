@@ -36,6 +36,10 @@
     "scheme_sun": "grijs → geel (zon)",
     "scheme_blue": "blauw → rood (koud → warm)",
     "scheme_mono": "neutraal",
-    "done": "Klaar"
+    "done": "Klaar",
+    "display": "Weergave",
+    "style_gauge": "Wijzerplaat",
+    "style_hbar": "Balk horizontaal",
+    "style_vbar": "Balk verticaal"
   }
 }

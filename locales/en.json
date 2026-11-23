@@ -36,6 +36,10 @@
     "scheme_sun": "grey → yellow (solar)",
     "scheme_blue": "blue → red (cold → hot)",
     "scheme_mono": "neutral",
-    "done": "Done"
+    "done": "Done",
+    "display": "Display",
+    "style_gauge": "Gauge",
+    "style_hbar": "Horizontal bar",
+    "style_vbar": "Vertical bar"
   }
 }

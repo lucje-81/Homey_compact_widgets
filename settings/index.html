@@ -27,10 +27,7 @@
     #addGauge { margin-bottom: 14px; }
     .preview { border: 1px solid #e5e5e5; border-radius: 12px; padding: 10px; margin: 6px 0 14px; color: #222; }
     .preview.dark { background: #1c1d22; color: #f2f2f2; border-color: #1c1d22; }
-    .preview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 6px; max-width: 360px; }
-    .preview-grid .g { display: flex; flex-direction: column; align-items: center; min-width: 0; }
-    .preview-grid svg { width: 100%; height: auto; }
-    .preview-grid span { font-size: 11px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .preview .cg-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 360px; }
     .status { font-size: 13px; color: #1d6b36; min-height: 18px; }
     .savebar { position: sticky; bottom: 0; background: #fff; padding: 8px 0; margin: 0; border-top: 1px solid #eee; z-index: 2; }
     .gauge-edit.collapsed { padding: 6px 10px; cursor: pointer; }
@@ -152,6 +149,12 @@
       }).join('');
     }
 
+    function styleOptions(sel) {
+      return ['gauge', 'hbar', 'vbar'].map(function (s) {
+        return '<option value="' + s + '"' + (s === (sel || 'gauge') ? ' selected' : '') + '>' + esc(t('style_' + s)) + '</option>';
+      }).join('');
+    }
+
     function schemeOptions(sel) {
       return CompactGauge.schemes.map(function (s) {
         return '<option value="' + s + '"' + (s === sel ? ' selected' : '') + '>' + esc(t('scheme_' + s)) + '</option>';
@@ -175,7 +178,7 @@
         if (expanded !== i) {
           var d = device(g.deviceId);
           var c = cap(g);
-          var sum = [d ? d.name : t('chooseDevice'), c ? c.title : '', (g.min + ' – ' + g.max + ' ' + (g.unit || '')).trim()]
+          var sum = [t('style_' + (g.style || 'gauge')), d ? d.name : t('chooseDevice'), c ? c.title : '', (g.min + ' – ' + g.max + ' ' + (g.unit || '')).trim()]
             .filter(Boolean).join(' · ');
           html += '<div class="gauge-edit collapsed" data-i="' + i + '" data-a="open"><div class="head">'
             + '<div class="sum" data-a="open"><b data-a="open">' + esc(g.title || t('titleField')) + '</b><small data-a="open">' + esc(sum) + '</small></div>'
@@ -186,6 +189,7 @@
           + '<div class="head"><input data-f="title" value="' + esc(g.title || '') + '" placeholder="' + esc(t('titleField')) + '">'
           + buttons + '<button class="small" data-a="close">' + esc(t('done')) + '</button></div>'
           + '<div class="fields">'
+          + '<label>' + esc(t('display')) + '<select data-f="style">' + styleOptions(g.style) + '</select></label>'
           + '<label>' + esc(t('device')) + '<select data-f="deviceId">' + deviceOptions(g.deviceId) + '</select></label>'
           + '<label>' + esc(t('value')) + '<select data-f="capability">' + capOptions(g) + '</select></label>'
           + '<label>' + esc(t('min')) + '<input type="number" data-f="min" value="' + esc(g.min) + '"></label>'
@@ -206,10 +210,10 @@
       var el = $('preview');
       if (!p || !el) return;
       if (!(p.gauges || []).length) { el.innerHTML = '<div style="opacity:.6">' + esc(t('noGauges')) + '</div>'; return; }
-      el.innerHTML = '<div style="font-weight:600;font-size:14px;margin:0 0 2px 2px">' + esc(p.name) + '</div><div class="preview-grid">'
+      el.innerHTML = '<div style="font-weight:600;font-size:14px;margin:0 0 2px 2px">' + esc(p.name) + '</div><div class="cg-grid size-M">'
         + p.gauges.map(function (g) {
           var c = cap(g);
-          return '<div class="g">' + CompactGauge.svg(g, c ? c.value : null, language) + '<span>' + esc(g.title || '') + '</span></div>';
+          return CompactGauge.item(g, c ? c.value : null, language);
         }).join('') + '</div>';
     }
 
@@ -240,7 +244,7 @@
     $('editor').addEventListener('click', function (e) {
       var p = panel();
       if (e.target.id === 'addGauge') {
-        p.gauges.push({ id: uid(), title: '', deviceId: '', capability: '', min: 0, max: 100, scheme: 'gyr', fromZero: false, decimals: null, unit: '' });
+        p.gauges.push({ id: uid(), style: 'gauge', title: '', deviceId: '', capability: '', min: 0, max: 100, scheme: 'gyr', fromZero: false, decimals: null, unit: '' });
         expanded = p.gauges.length - 1;
         renderEditor(); setDirty(true); return;
       }
