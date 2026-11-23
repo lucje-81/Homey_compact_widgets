@@ -60,7 +60,7 @@
   "notSupported": "Niet ondersteund",
   "chooseClimate": "Kies je thermostaten, rolluiken en poorten in de instellingen van deze widget.",
   "chooseFlows": "Kies tot 8 flows in de instellingen van deze widget.",
-  "flow": "Flow",
+  "flow": "Aanvoer",
   "advancedFlow": "Geavanceerde flow",
   "opening": "Gaat open",
   "closing": "Gaat dicht",
@@ -90,5 +90,14 @@
   "missing": "Toestel niet gevonden",
   "fieldsHint": "Tik de waarden aan die je wilt zien, in de volgorde waarin je ze aantikt.",
   "fieldsHintAuto": "Nu automatisch gekozen. Tik waarden aan of uit om zelf te kiezen.",
-  "chooseEnergy": "Kies je omvormer(s) en thuisbatterij in de instellingen van deze widget."
+  "chooseEnergy": "Kies je omvormer(s) en thuisbatterij in de instellingen van deze widget.",
+  "fault": "Storing",
+  "pressure": "Waterdruk",
+  "hotWater": "Warm water",
+  "heating": "Verwarmen",
+  "modulation": "modulatie",
+  "standby": "Stand-by",
+  "max": "Max",
+  "chooseBoiler": "Kies je verwarmingsketel in de instellingen van deze widget.",
+  "flowToday": "Aanvoer vandaag"
 }

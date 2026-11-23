@@ -90,5 +90,14 @@
   "missing": "Device not found",
   "fieldsHint": "Tap the values you want to see, in the order you tap them.",
   "fieldsHintAuto": "Chosen automatically now. Tap values on or off to choose yourself.",
-  "chooseEnergy": "Choose your inverter(s) and home battery in this widget's settings."
+  "chooseEnergy": "Choose your inverter(s) and home battery in this widget's settings.",
+  "fault": "Fault",
+  "pressure": "Water pressure",
+  "hotWater": "Hot water",
+  "heating": "Heating",
+  "modulation": "modulation",
+  "standby": "Standby",
+  "max": "Max",
+  "chooseBoiler": "Choose your boiler in this widget's settings.",
+  "flowToday": "Flow today"
 }

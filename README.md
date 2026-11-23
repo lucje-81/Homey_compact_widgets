@@ -54,6 +54,15 @@ On a tablet with 4 dashboard columns, six gauges take about the height of one st
 - **Values**: up to 6 are chosen automatically (total energy, voltage, current, string power, temperature, frequency; for batteries charged/discharged energy, voltage, temperature). Tap a card to choose any readable value of the device yourself, in the order you tap them; the choice is stored per device in the app
 - Cards per row: automatic or 1–3; size small/medium/large
 
+## Boiler widget (v0.8)
+
+- One card per boiler; works with any boiler app (Nefit/Bosch, Remeha, Vaillant, Viessmann, Intergas, OpenTherm gateway, …). Boiler apps name their values differently, so the widget recognises them by id, title and unit
+- Room temperature large (or the boiler water temperature when there is no room temperature), the target temperature with **− / +** buttons (sent 0.8 s after the last tap)
+- Water pressure, coloured orange below 1.2 / above 2.5 bar and red below 0.8 / above 3 bar, and the flow temperature
+- Status: heating with modulation, hot water, standby, or the active alarms in red with a **Fault** label
+- Today's flow temperature curve from Homey Insights with the maximum and its time
+- Values: return, hot water and outside temperature and gas use are chosen automatically; tap the card to choose any readable value yourself
+
 ## How to use
 
 1. Install the app (see below).
@@ -65,7 +74,7 @@ You can use the same panel in several widgets (e.g. 2 per row on a tablet, 3 per
 
 ## Permission
 
-The app uses the `homey:manager:api` permission to read the values of devices from other apps and, in the Lights and switches and Climate widgets, to control them (on/off, dim, light colour/temperature/mode, target temperature, thermostat mode, window coverings, garage doors and button presses), and to start the flows you put on the Flows widget.
+The app uses the `homey:manager:api` permission to read the values of devices from other apps and, in the Lights and switches and Climate widgets, to control them (on/off, dim, light colour/temperature/mode, target temperature (also in the Boiler widget), thermostat mode, window coverings, garage doors and button presses), and to start the flows you put on the Flows widget.
 
 ## Installation
 

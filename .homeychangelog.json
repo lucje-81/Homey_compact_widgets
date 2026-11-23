@@ -1,4 +1,8 @@
 {
+  "0.8.0": {
+    "en": "New widget: Boiler (room and target temperature with − / +, water pressure, flow temperature, burner and hot water state, faults, today's curve)",
+    "nl": "Nieuwe widget: Verwarmingsketel (kamer- en doeltemperatuur met − / +, waterdruk, aanvoertemperatuur, brander en warm water, storingen, dagcurve)"
+  },
   "0.7.0": {
     "en": "New widget: Inverter and battery (power, today's energy, today's curve, battery level, charging/discharging and values of your choice)",
     "nl": "Nieuwe widget: Omvormer en batterij (vermogen, opbrengst vandaag, dagcurve, laadtoestand, laden/ontladen en zelf gekozen waarden)"

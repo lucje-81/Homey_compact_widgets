@@ -203,7 +203,8 @@ class CompactWidgetsApp extends Homey.App {
         const device = await this.api.devices.getDevice({ id });
         const caps = [];
         for (const [capId, cap] of Object.entries(device.capabilitiesObj || {})) {
-          if (!cap || cap.getable === false || cap.setable || SKIP_ENERGY.includes(capId)) continue;
+          const adjustable = capId === 'target_temperature' || capId.startsWith('target_temperature.');
+          if (!cap || cap.getable === false || (cap.setable && !adjustable) || SKIP_ENERGY.includes(capId)) continue;
           if (!['number', 'string', 'enum', 'boolean'].includes(cap.type)) continue;
           if (caps.length >= ENERGY_MAX_CAPS) break;
           const key = `${id}|${capId}`;
@@ -219,6 +220,10 @@ class CompactWidgetsApp extends Homey.App {
             decimals: typeof cap.decimals === 'number' ? cap.decimals : null,
             values: Array.isArray(cap.values) ? cap.values.map((v) => ({ id: v.id, title: v.title || v.id })) : undefined,
             value: key in this.values ? this.values[key] : cap.value,
+            setable: adjustable || undefined,
+            min: adjustable ? cap.min ?? 5 : undefined,
+            max: adjustable ? cap.max ?? 30 : undefined,
+            step: adjustable ? cap.step || 0.5 : undefined,
           });
         }
         devices.push({
@@ -289,7 +294,9 @@ class CompactWidgetsApp extends Homey.App {
 
   /** Set one capability of a device (only the capabilities the widget offers). */
   async setControlValue({ deviceId, capability, value }) {
-    if (!deviceId || !SETTABLE.includes(capability)) throw new Error('Not allowed');
+    const target = typeof capability === 'string' && /^target_temperature(\.[\w-]+)?$/.test(capability);
+    if (!deviceId || !(SETTABLE.includes(capability) || target)) throw new Error('Not allowed');
+    if (target && (typeof value !== 'number' || !Number.isFinite(value))) throw new Error('Not allowed');
     await this.api.devices.setCapabilityValue({ deviceId, capabilityId: capability, value });
     return true;
   }

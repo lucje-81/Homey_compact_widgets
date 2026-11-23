@@ -1,6 +1,6 @@
 {
   "name": "compact.widgets",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "main": "app.js",
   "license": "MIT",
   "engines": {

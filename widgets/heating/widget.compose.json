@@ -1,0 +1,116 @@
+{
+  "name": {
+    "en": "Boiler",
+    "nl": "Verwarmingsketel"
+  },
+  "devices": {
+    "type": "global",
+    "singular": false
+  },
+  "settings": [
+    {
+      "id": "title",
+      "type": "text",
+      "value": "",
+      "title": {
+        "en": "Title (optional)",
+        "nl": "Titel (optioneel)"
+      }
+    },
+    {
+      "id": "columns",
+      "type": "dropdown",
+      "value": "auto",
+      "title": {
+        "en": "Cards per row",
+        "nl": "Kaarten per rij"
+      },
+      "values": [
+        {
+          "id": "auto",
+          "title": {
+            "en": "Automatic",
+            "nl": "Automatisch"
+          }
+        },
+        {
+          "id": "1",
+          "title": {
+            "en": "1"
+          }
+        },
+        {
+          "id": "2",
+          "title": {
+            "en": "2"
+          }
+        },
+        {
+          "id": "3",
+          "title": {
+            "en": "3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "size",
+      "type": "dropdown",
+      "value": "M",
+      "title": {
+        "en": "Size",
+        "nl": "Grootte"
+      },
+      "values": [
+        {
+          "id": "S",
+          "title": {
+            "en": "Small",
+            "nl": "Klein"
+          }
+        },
+        {
+          "id": "M",
+          "title": {
+            "en": "Medium",
+            "nl": "Normaal"
+          }
+        },
+        {
+          "id": "L",
+          "title": {
+            "en": "Large",
+            "nl": "Groot"
+          }
+        }
+      ]
+    },
+    {
+      "id": "curve",
+      "type": "checkbox",
+      "value": true,
+      "title": {
+        "en": "Show today's flow temperature curve",
+        "nl": "Curve van de aanvoertemperatuur van vandaag tonen"
+      }
+    }
+  ],
+  "api": {
+    "getState": {
+      "method": "GET",
+      "path": "/state"
+    },
+    "getHistory": {
+      "method": "GET",
+      "path": "/history"
+    },
+    "setFields": {
+      "method": "POST",
+      "path": "/fields"
+    },
+    "setValue": {
+      "method": "POST",
+      "path": "/set"
+    }
+  }
+}
