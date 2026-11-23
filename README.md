@@ -64,6 +64,15 @@ On a tablet with 4 dashboard columns, six gauges take about the height of one st
 - Values: return, hot water and outside temperature, heat output, flow rate and gas use are chosen automatically; tap the card to choose any readable value yourself
 - Tested against the [Weishaupt WTC app](https://github.com/lucje-81/Homey_weishaupt_direct): burner phase as status ("Burner on · 12.4 kW"), hot water priority shown in blue, fault text from the boiler, and the heating circuits with their target temperature and mode
 
+## EV charger widget (v0.9)
+
+- Works with chargers that use Homey's standard EV charger capabilities (Easee, Zaptec, Alfen, Wallbox, …) and with a kWh meter in front of the charger, such as the [Chint DTSU666 app](https://github.com/lucje-81/Homey_chintdtsu666_modbus)
+- State label: charging (green), paused (orange), plugged in (blue), unplugged or not charging (grey)
+- Charging power large, with a current bar per phase (scaled to the charger's current limit, 16/32 A automatically, or set in the widget settings)
+- Session energy and duration, and the car's battery level when the charger knows it
+- **Start / Stop charging** button for chargers that can be switched from Homey (`evcharger_charging`)
+- Today's power curve with the peak and its time; values of your choice as in the other widgets
+
 ## How to use
 
 1. Install the app (see below).
@@ -75,7 +84,7 @@ You can use the same panel in several widgets (e.g. 2 per row on a tablet, 3 per
 
 ## Permission
 
-The app uses the `homey:manager:api` permission to read the values of devices from other apps and, in the Lights and switches and Climate widgets, to control them (on/off, dim, light colour/temperature/mode, target temperature (also in the Boiler widget), thermostat mode, window coverings, garage doors and button presses), and to start the flows you put on the Flows widget.
+The app uses the `homey:manager:api` permission to read the values of devices from other apps and, in the Lights and switches and Climate widgets, to control them (on/off, dim, light colour/temperature/mode, target temperature (also in the Boiler widget), thermostat mode, window coverings, garage doors, button presses and starting/stopping an EV charger), and to start the flows you put on the Flows widget.
 
 ## Installation
 

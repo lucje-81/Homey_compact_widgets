@@ -99,5 +99,17 @@
   "standby": "Stand-by",
   "max": "Max",
   "chooseBoiler": "Kies je verwarmingsketel in de instellingen van deze widget.",
-  "flowToday": "Aanvoer vandaag"
+  "flowToday": "Aanvoer vandaag",
+  "pluggedIn": "Aangesloten",
+  "pluggedOut": "Niet aangesloten",
+  "paused": "Gepauzeerd",
+  "session": "Sessie",
+  "duration": "Duur",
+  "car": "Auto",
+  "h": "u",
+  "startCharging": "Laden starten",
+  "stopCharging": "Laden stoppen",
+  "notCharged": "Nog niet geladen",
+  "chooseCharger": "Kies je laadpaal of laadmeter in de instellingen van deze widget.",
+  "notCharging": "Laadt niet"
 }

@@ -203,7 +203,7 @@ class CompactWidgetsApp extends Homey.App {
         const device = await this.api.devices.getDevice({ id });
         const caps = [];
         for (const [capId, cap] of Object.entries(device.capabilitiesObj || {})) {
-          const adjustable = capId === 'target_temperature' || capId.startsWith('target_temperature.');
+          const adjustable = capId === 'target_temperature' || capId.startsWith('target_temperature.') || capId === 'evcharger_charging';
           // Setable enums (e.g. a heating mode) are shown as a value, never set from these widgets
           if (!cap || cap.getable === false || (cap.setable && !adjustable && cap.type !== 'enum') || SKIP_ENERGY.includes(capId)) continue;
           if (!['number', 'string', 'enum', 'boolean'].includes(cap.type)) continue;
@@ -222,9 +222,9 @@ class CompactWidgetsApp extends Homey.App {
             values: Array.isArray(cap.values) ? cap.values.map((v) => ({ id: v.id, title: v.title || v.id })) : undefined,
             value: key in this.values ? this.values[key] : cap.value,
             setable: adjustable || undefined,
-            min: adjustable ? cap.min ?? 5 : undefined,
-            max: adjustable ? cap.max ?? 30 : undefined,
-            step: adjustable ? cap.step || 0.5 : undefined,
+            min: adjustable && cap.type === 'number' ? cap.min ?? 5 : undefined,
+            max: adjustable && cap.type === 'number' ? cap.max ?? 30 : undefined,
+            step: adjustable && cap.type === 'number' ? cap.step || 0.5 : undefined,
           });
         }
         devices.push({
@@ -296,8 +296,9 @@ class CompactWidgetsApp extends Homey.App {
   /** Set one capability of a device (only the capabilities the widget offers). */
   async setControlValue({ deviceId, capability, value }) {
     const target = typeof capability === 'string' && /^target_temperature(\.[\w-]+)?$/.test(capability);
-    if (!deviceId || !(SETTABLE.includes(capability) || target)) throw new Error('Not allowed');
+    if (!deviceId || !(SETTABLE.includes(capability) || target || capability === 'evcharger_charging')) throw new Error('Not allowed');
     if (target && (typeof value !== 'number' || !Number.isFinite(value))) throw new Error('Not allowed');
+    if (capability === 'evcharger_charging' && typeof value !== 'boolean') throw new Error('Not allowed');
     await this.api.devices.setCapabilityValue({ deviceId, capabilityId: capability, value });
     return true;
   }

@@ -99,5 +99,17 @@
   "standby": "Standby",
   "max": "Max",
   "chooseBoiler": "Choose your boiler in this widget's settings.",
-  "flowToday": "Flow today"
+  "flowToday": "Flow today",
+  "pluggedIn": "Plugged in",
+  "pluggedOut": "Unplugged",
+  "paused": "Paused",
+  "session": "Session",
+  "duration": "Duration",
+  "car": "Car",
+  "h": "h",
+  "startCharging": "Start charging",
+  "stopCharging": "Stop charging",
+  "notCharged": "Not charged yet",
+  "chooseCharger": "Choose your EV charger or charging meter in this widget's settings.",
+  "notCharging": "Not charging"
 }

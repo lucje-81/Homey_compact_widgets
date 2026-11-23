@@ -1,4 +1,8 @@
 {
+  "0.9.0": {
+    "en": "New widget: EV charger (state, power, current per phase, session energy and duration, car battery, start/stop, today's curve)",
+    "nl": "Nieuwe widget: Laadpaal (status, vermogen, stroom per fase, energie en duur van de sessie, batterij van de auto, starten/stoppen, dagcurve)"
+  },
   "0.8.1": {
     "en": "Boiler widget tuned for the Weishaupt WTC app: burner phase, hot water priority, fault text, heat output, flow rate, circuit mode",
     "nl": "Ketelwidget afgestemd op de Weishaupt WTC-app: branderfase, warmwatervoorrang, storingstekst, warmtevermogen, debiet, modus van de kring"
