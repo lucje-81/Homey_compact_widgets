@@ -44,24 +44,28 @@
     });
   }
 
-  function number(v, decimals) {
-    return Number(v).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  function number(v, decimals, locale) {
+    try {
+      return Number(v).toLocaleString(locale || undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    } catch (e) {
+      return Number(v).toFixed(decimals);
+    }
   }
 
-  /** Format a value with its unit; W becomes kW from 1000 W. */
-  function format(value, g) {
+  /** Format a value with its unit; W becomes kW from 1000 W. locale: e.g. 'nl' (Homey language). */
+  function format(value, g, locale) {
     if (value === null || value === undefined || value === '' || isNaN(Number(value))) return '–';
     var v = Number(value);
     var unit = g.unit || '';
     if (unit === 'W' && Math.abs(v) >= 1000) {
       v /= 1000;
       unit = 'kW';
-      return number(v, 1).replace('-', '−') + ' ' + unit;
+      return number(v, 1, locale).replace('-', '−') + ' ' + unit;
     }
     var d = (g.decimals === null || g.decimals === undefined || g.decimals === '')
       ? (Math.abs(v) < 10 && v % 1 !== 0 ? 1 : 0)
       : Number(g.decimals);
-    var text = number(v, d).replace('-', '−');
+    var text = number(v, d, locale).replace('-', '−');
     if (!unit) return text;
     return unit === '%' ? text + ' %' : text + ' ' + unit;
   }
@@ -76,9 +80,9 @@
    * SVG for one gauge.
    * g: { title, unit, min, max, scheme, fromZero, decimals }
    */
-  function svg(g, value) {
+  function svg(g, value, locale) {
     var W = 120;
-    var H = 70;
+    var H = 76;
     var cx = 60;
     var cy = 58;
     var r = 47;
@@ -119,13 +123,13 @@
     }
 
     out += '<text x="' + cx + '" y="' + (cy - 3) + '" text-anchor="middle" fill="currentColor" style="font-size:15px;font-weight:600">'
-      + esc(format(value, g)) + '</text>';
+      + esc(format(value, g, locale)) + '</text>';
     out += '<text x="' + (cx - r) + '" y="' + (cy + 11) + '" text-anchor="middle" fill="currentColor" opacity="0.55" style="font-size:9px">'
       + esc(shortNumber(min)) + '</text>';
     out += '<text x="' + (cx + r) + '" y="' + (cy + 11) + '" text-anchor="middle" fill="currentColor" opacity="0.55" style="font-size:9px">'
       + esc(shortNumber(max)) + '</text>';
 
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(g.title) + ': ' + esc(format(value, g)) + '">' + out + '</svg>';
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(g.title) + ': ' + esc(format(value, g, locale)) + '">' + out + '</svg>';
   }
 
   root.CompactGauge = { svg: svg, format: format, schemes: Object.keys(SCHEMES), colorAt: colorAt, esc: esc };

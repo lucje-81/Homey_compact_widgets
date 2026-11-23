@@ -5,4 +5,8 @@ module.exports = {
   async getDevices({ homey }) {
     return homey.app.getDevices();
   },
+
+  async getInfo({ homey }) {
+    return { language: homey.app.getLanguage() };
+  },
 };

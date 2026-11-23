@@ -12,6 +12,8 @@ this app puts **several gauges in one widget**, so a full energy dashboard fits 
   - green → red (consumption), red → green (battery level), grey → yellow (solar), blue → red (temperature), neutral
   - **from 0 (+/−)** for signed values such as grid import/export or battery charge/discharge
 - Values update live; the widget height follows its content, so there is no empty space
+- After **Save** in the settings, open widgets reload their panel immediately
+- Numbers use the language of your Homey (e.g. `0,6 A` in Dutch)
 - Follows Homey's light and dark theme
 
 On a tablet with 4 dashboard columns, six gauges take about the height of one standard gauge widget.

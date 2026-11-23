@@ -1,6 +1,6 @@
 {
   "id": "compact.widgets",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": [
@@ -48,6 +48,10 @@
     "getDevices": {
       "method": "GET",
       "path": "/devices"
+    },
+    "getInfo": {
+      "method": "GET",
+      "path": "/info"
     }
   }
 }

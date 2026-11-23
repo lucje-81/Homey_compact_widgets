@@ -1,4 +1,8 @@
 {
+  "0.2.0": {
+    "en": "Widgets update right after saving; compact editor for small windows; decimal comma and automatic decimals",
+    "nl": "Widgets werken meteen bij na opslaan; compacte editor voor kleine vensters; decimaalkomma en automatische decimalen"
+  },
   "0.1.1": {
     "en": "Panel editor: new/rename/delete now work in the Homey mobile app",
     "nl": "Paneeleditor: nieuw, naam wijzigen en verwijderen werken nu in de Homey-app"

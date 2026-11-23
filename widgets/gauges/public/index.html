@@ -8,7 +8,7 @@
     .grid { display: grid; gap: 2px 6px; }
     .gauge { display: flex; flex-direction: column; align-items: center; min-width: 0; }
     .gauge svg { width: 100%; height: auto; display: block; }
-    .gauge-title { font-size: 11px; opacity: 0.7; margin-top: -1px; max-width: 100%;
+    .gauge-title { font-size: 11px; opacity: 0.7; margin-top: 0; max-width: 100%;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
     .size-S .gauge-title { font-size: 10px; }
     .size-L .gauge-title { font-size: 12px; }
@@ -21,7 +21,7 @@
   <script>
     // Minimum gauge width per size, used by the "Automatic" column setting
     var MIN_WIDTH = { S: 70, M: 96, L: 130 };
-    var state = { panel: null, values: {}, settings: {}, ready: false, lastHeight: 0 };
+    var state = { panel: null, values: {}, settings: {}, ready: false, lastHeight: 0, language: undefined };
 
     function key(g) { return g.deviceId + '|' + g.capability; }
 
@@ -48,7 +48,7 @@
       if (state.settings.show_title !== false) html += '<div class="panel-title">' + CompactGauge.esc(p.name) + '</div>';
       html += '<div class="grid size-' + (state.settings.size || 'M') + '" style="grid-template-columns:repeat(' + columns(gauges.length) + ',minmax(0,1fr))">';
       gauges.forEach(function (g, i) {
-        html += '<div class="gauge" id="g' + i + '">' + CompactGauge.svg(g, state.values[key(g)])
+        html += '<div class="gauge" id="g' + i + '">' + CompactGauge.svg(g, state.values[key(g)], state.language)
           + '<span class="gauge-title">' + CompactGauge.esc(g.title) + '</span></div>';
       });
       html += '</div>';
@@ -64,7 +64,7 @@
         if (!(k in batch)) return;
         state.values[k] = batch[k];
         var el = document.getElementById('g' + i);
-        if (el) el.firstChild.outerHTML = CompactGauge.svg(g, batch[k]);
+        if (el) el.firstChild.outerHTML = CompactGauge.svg(g, batch[k], state.language);
       });
     }
 
@@ -86,19 +86,27 @@
       if (!panel || !panel.id) return message(Homey.__('choosePanel'));
 
       Homey.on('values', update);
+      // panels were saved in the app settings: reload this panel
+      Homey.on('panels', function () { load(panel.id); });
 
-      Homey.api('GET', '/panel?id=' + encodeURIComponent(panel.id))
+      // re-layout when the widget width changes (rotation, other screen)
+      var lastWidth = document.getElementById('root').clientWidth;
+      window.addEventListener('resize', function () {
+        var w = document.getElementById('root').clientWidth;
+        if (w !== lastWidth) { lastWidth = w; render(); }
+      });
+
+      load(panel.id);
+    }
+
+    function load(id) {
+      Homey.api('GET', '/panel?id=' + encodeURIComponent(id))
         .then(function (data) {
           if (!data) return message(Homey.__('panelMissing'));
           state.panel = data;
           state.values = data.values || {};
+          state.language = data.language;
           render();
-          // re-layout when the widget width changes (rotation, other screen)
-          var lastWidth = document.getElementById('root').clientWidth;
-          window.addEventListener('resize', function () {
-            var w = document.getElementById('root').clientWidth;
-            if (w !== lastWidth) { lastWidth = w; render(); }
-          });
         })
         .catch(function (err) {
           message(String(err && err.message ? err.message : err));

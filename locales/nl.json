@@ -35,6 +35,7 @@
     "scheme_ryg": "rood → groen",
     "scheme_sun": "grijs → geel (zon)",
     "scheme_blue": "blauw → rood (koud → warm)",
-    "scheme_mono": "neutraal"
+    "scheme_mono": "neutraal",
+    "done": "Klaar"
   }
 }

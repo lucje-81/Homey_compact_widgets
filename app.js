@@ -25,7 +25,9 @@ class CompactWidgetsApp extends Homey.App {
     this.api = await HomeyAPI.createAppAPI({ homey: this.homey });
 
     this.homey.settings.on('set', (key) => {
-      if (key === PANELS_KEY) this.queueSync();
+      if (key !== PANELS_KEY) return;
+      // subscribe to new values first, then tell open widgets to reload their panel
+      this.queueSync().then(() => this.homey.api.realtime('panels', { updated: Date.now() }));
     });
 
     this.homey.dashboards.getWidget('gauges')
@@ -119,7 +121,11 @@ class CompactWidgetsApp extends Homey.App {
       const key = CompactWidgetsApp.key(gauge);
       values[key] = key in this.values ? this.values[key] : null;
     }
-    return { ...panel, values };
+    return { ...panel, values, language: this.homey.i18n.getLanguage() };
+  }
+
+  getLanguage() {
+    return this.homey.i18n.getLanguage();
   }
 
   /** Devices with numeric capabilities, for the panel editor. */
