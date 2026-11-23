@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "compact.widgets",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": [
@@ -53,6 +53,10 @@
     "getInfo": {
       "method": "GET",
       "path": "/info"
+    },
+    "getIconDevices": {
+      "method": "GET",
+      "path": "/icon-devices"
     }
   },
   "widgets": {

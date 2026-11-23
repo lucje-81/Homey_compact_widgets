@@ -6,6 +6,10 @@ module.exports = {
     return homey.app.getDevices();
   },
 
+  async getIconDevices({ homey }) {
+    return homey.app.getIconDevices();
+  },
+
   async getInfo({ homey }) {
     return { language: homey.app.getLanguage() };
   },

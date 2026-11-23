@@ -36,7 +36,8 @@ On a tablet with 4 dashboard columns, six gauges take about the height of one st
 - Window coverings: state (`Open 60 %`, `Closed`, going up/down) with a thin position bar; tap for **▲ ■ ▼** and a position slider (only what the device supports)
 - Garage doors and gates (v0.6): `garagedoor_closed` (Open / Close buttons), impulse relays with a `button` capability (Operate button), relays with on/off, and a contact sensor (`alarm_contact`) for the state. Gates always open a panel first, so a single accidental tap never moves a gate
 - Icons drawn to show the actual state (closed, half open, open): sectional door, up-and-over (tilt) door, roller door, swing gate with two leaves, sliding gate, roller shutter, awning, thermostat, switch
-- The icon is guessed from the device class and name (e.g. "kantelpoort", "schuifpoort", "tuinpoort"); change it in the panel under **Icon** (long press on a tile also opens the panel). The choice is stored in the app, so every dashboard shows the same icon
+- The icon is guessed from the device class and name (e.g. "kantelpoort", "schuifpoort", "tuinpoort"); change it in the app settings (Homey app → Apps → Compact Widgets → Configure app → **Icons** tab). The choice is stored in the app, so every dashboard shows the same icon
+- Thermostats with an on/off capability get a power button next to − / + (v0.10); a thermostat that is off shows "Off" and no heating colour
 - Plain on/off devices can be added too and are switched with a tap
 
 ## Flows widget (v0.5)

@@ -1,4 +1,8 @@
 {
+  "0.10.0": {
+    "en": "Thermostats: on/off button. Icons for the Climate widget are now chosen in the app settings (Icons tab) instead of in the widget",
+    "nl": "Thermostaten: aan/uit-knop. Iconen voor de klimaatwidget kies je nu in de app-instellingen (tabblad Iconen) in plaats van in de widget"
+  },
   "0.9.0": {
     "en": "New widget: EV charger (state, power, current per phase, session energy and duration, car battery, start/stop, today's curve)",
     "nl": "Nieuwe widget: Laadpaal (status, vermogen, stroom per fase, energie en duur van de sessie, batterij van de auto, starten/stoppen, dagcurve)"

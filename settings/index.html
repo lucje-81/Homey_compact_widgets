@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
   <script src="gauge.js"></script>
+  <script src="icons.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; color: #222; margin: 0; padding: 12px; }
     h1 { font-size: 18px; margin: 0 0 4px; }
@@ -36,10 +37,29 @@
     .gauge-edit .sum b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .gauge-edit .sum small { display: block; font-size: 12px; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .status.unsaved { color: #8a5a00; }
+    .tabs { display: flex; gap: 4px; margin: 0 0 12px; border-bottom: 1px solid #e5e5e5; }
+    .tabs button { border: none; border-bottom: 3px solid transparent; border-radius: 0; background: none; padding: 8px 12px; font-weight: 600; color: #666; }
+    .tabs button.sel { color: #2f6fde; border-bottom-color: #2f6fde; }
+    .irow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+    .irow .ic { flex: none; width: 34px; height: 34px; color: #333; }
+    .irow .ic svg { width: 100%; height: 100%; }
+    .irow .nm { flex: 1 1 140px; min-width: 0; }
+    .irow .nm b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .irow .nm small { color: #888; }
+    .irow select { flex: 0 1 210px; min-width: 150px; margin-left: auto; }
     .empty { padding: 16px; text-align: center; color: #777; border: 1px dashed #ccc; border-radius: 8px; }
   </style>
 </head>
 <body>
+  <div class="tabs"><button id="tabBtnGauges" class="sel" data-t="tabGauges"></button><button id="tabBtnIcons" data-t="tabIcons"></button></div>
+  <div id="tabIcons" style="display:none">
+    <h1 data-t="iconsTitle"></h1>
+    <p class="hint" data-t="iconsIntro"></p>
+    <div class="row"><input id="iconSearch" type="search" style="flex:1;min-width:160px" placeholder=""><label style="font-size:13px;color:#555"><input id="iconAll" type="checkbox"> <span data-t="iconsAll"></span></label></div>
+    <div id="iconList"></div>
+    <div class="status" id="iconStatus"></div>
+  </div>
+  <div id="tabGauges">
   <h1 data-t="title"></h1>
   <p class="hint" data-t="intro"></p>
 
@@ -58,6 +78,7 @@
   <div class="row savebar">
     <button id="save" class="primary" data-t="save"></button>
     <span id="status" class="status"></span>
+  </div>
   </div>
 
   <script type="text/javascript">
@@ -312,8 +333,69 @@
       });
     }
 
+    // ---- Icons tab -------------------------------------------------------
+    var iconData = null;
+    var GATE_CLASSES = ['windowcoverings', 'blinds', 'curtain', 'sunshade', 'awning', 'garagedoor', 'thermostat', 'heater'];
+    function iconRelevant(d) {
+      return GATE_CLASSES.indexOf(d.class) >= 0 || d.caps.some(function (c) { return c !== 'onoff'; }) || /poort|gate|hek|garage|rolluik|scherm/i.test(d.name);
+    }
+    function renderIcons() {
+      var list = $('iconList');
+      if (!iconData) { list.innerHTML = '<div class="empty">…</div>'; return; }
+      var q = $('iconSearch').value.trim().toLowerCase();
+      var all = $('iconAll').checked || !!q;
+      var CI = window.CompactIcons;
+      var rows = iconData.devices.filter(function (d) {
+        return (all || iconRelevant(d) || iconData.icons[d.id]) && (!q || (d.name + ' ' + d.zone).toLowerCase().indexOf(q) >= 0);
+      });
+      if (!rows.length) { list.innerHTML = '<div class="empty">' + t('iconsNone') + '</div>'; return; }
+      list.innerHTML = rows.map(function (d) {
+        var caps = {}; d.caps.forEach(function (c) { caps[c] = true; });
+        var auto = CI.autoIcon({ name: d.name, class: d.class, caps: caps });
+        var chosen = iconData.icons[d.id] || 'auto';
+        return '<div class="irow"><span class="ic">' + CI.iconSvg(chosen === 'auto' ? auto : chosen, 0.3) + '</span>'
+          + '<span class="nm"><b>' + esc(d.name) + '</b><small>' + esc(d.zone) + '</small></span>'
+          + '<select data-dev="' + esc(d.id) + '">' + CI.ICON_ORDER.map(function (n) {
+            var label = n === 'auto' ? 'Auto: ' + t('icon_' + auto) : t('icon_' + n);
+            return '<option value="' + n + '"' + (n === chosen ? ' selected' : '') + '>' + esc(label) + '</option>';
+          }).join('') + '</select></div>';
+      }).join('');
+    }
+    function esc(v) { return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function loadIcons() {
+      H.api('GET', '/icon-devices', null, function (err, res) {
+        if (err) return H.alert(err.message || String(err));
+        iconData = res; renderIcons();
+      });
+    }
+    function showTab(name) {
+      $('tabGauges').style.display = name === 'gauges' ? '' : 'none';
+      $('tabIcons').style.display = name === 'icons' ? '' : 'none';
+      $('tabBtnGauges').classList.toggle('sel', name === 'gauges');
+      $('tabBtnIcons').classList.toggle('sel', name === 'icons');
+      if (name === 'icons' && !iconData) loadIcons();
+    }
+    $('tabBtnGauges').addEventListener('click', function () { showTab('gauges'); });
+    $('tabBtnIcons').addEventListener('click', function () { showTab('icons'); });
+    $('iconSearch').addEventListener('input', renderIcons);
+    $('iconAll').addEventListener('change', renderIcons);
+    $('iconList').addEventListener('change', function (e) {
+      var id = e.target.getAttribute('data-dev');
+      if (!id) return;
+      var icons = Object.assign({}, iconData.icons);
+      if (e.target.value === 'auto') delete icons[id]; else icons[id] = e.target.value;
+      H.set('icons', icons, function (err) {
+        if (err) return H.alert(err.message || String(err));
+        iconData.icons = icons;
+        $('iconStatus').textContent = t('saved');
+        setTimeout(function () { $('iconStatus').textContent = ''; }, 2000);
+        renderIcons();
+      });
+    });
+
     function onHomeyReady(Homey) {
       H = Homey;
+      $('iconSearch').placeholder = Homey.__('settings.iconsSearch');
       document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
       Homey.get('panels', function (err, value) {
         panels = Array.isArray(value) ? value : [];

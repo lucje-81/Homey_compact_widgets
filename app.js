@@ -337,6 +337,28 @@ class CompactWidgetsApp extends Homey.App {
   }
 
   /** Devices with numeric capabilities, for the panel editor. */
+  /** Devices that can get an icon in the Climate widget (settings page, "Icons" tab). */
+  async getIconDevices() {
+    const [devices, zones] = await Promise.all([
+      this.api.devices.getDevices(),
+      this.api.zones.getZones().catch(() => ({})),
+    ]);
+    const relevant = ['windowcoverings_set', 'windowcoverings_state', 'garagedoor_closed', 'button', 'alarm_contact', 'onoff', 'target_temperature'];
+    return {
+      icons: this.homey.settings.get(ICONS_KEY) || {},
+      devices: Object.values(devices)
+        .map((device) => ({
+          id: device.id,
+          name: device.name,
+          class: device.virtualClass || device.class,
+          zone: (zones[device.zone] && zones[device.zone].name) || '',
+          caps: Object.keys(device.capabilitiesObj || {}).filter((c) => relevant.includes(c)),
+        }))
+        .filter((d) => d.caps.length > 0)
+        .sort((x, y) => (x.zone + x.name).localeCompare(y.zone + y.name)),
+    };
+  }
+
   async getDevices() {
     const [devices, zones] = await Promise.all([
       this.api.devices.getDevices(),
